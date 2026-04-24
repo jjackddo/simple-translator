@@ -253,7 +253,11 @@ function render() {
     tab.textContent = category;
     tab.onclick = () => {
       const el = document.getElementById('cat-' + idx);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!el) return;
+      const header = document.querySelector('header');
+      const headerH = header ? header.offsetHeight : 0;
+      const y = el.getBoundingClientRect().top + window.scrollY - headerH - 4;
+      window.scrollTo(0, y);
     };
     nav.appendChild(tab);
 
