@@ -37,10 +37,22 @@ ENV_PATH = os.path.join(ROOT, '.env')
 TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize'
 VOICES_URL = 'https://texttospeech.googleapis.com/v1/voices'
 
-# 언어별 기본 설정
+# 언어별/성별 기본 설정
 LANG_CONFIG = {
-    'vi': {'language_code': 'vi-VN', 'default_voice': 'vi-VN-Neural2-A'},
-    'ja': {'language_code': 'ja-JP', 'default_voice': 'ja-JP-Neural2-B'},
+    'vi': {
+        'language_code': 'vi-VN',
+        'voices': {
+            'female': 'vi-VN-Neural2-A',
+            'male':   'vi-VN-Neural2-D',
+        },
+    },
+    'ja': {
+        'language_code': 'ja-JP',
+        'voices': {
+            'female': 'ja-JP-Neural2-B',
+            'male':   'ja-JP-Neural2-C',
+        },
+    },
 }
 
 
@@ -169,23 +181,38 @@ def list_voices(language_code, api_key):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--lang', default='vi', choices=sorted(LANG_CONFIG.keys()))
+    parser.add_argument('--gender', default='female', choices=['female', 'male'])
     parser.add_argument('--voice', default=None)
     parser.add_argument('--rate', type=float, default=0.9)
     parser.add_argument('--force', action='store_true')
     parser.add_argument('--list-voices', action='store_true')
+    parser.add_argument('--all', action='store_true',
+                        help='모든 언어/성별 조합을 한 번에 생성')
     args = parser.parse_args()
-
-    cfg = LANG_CONFIG[args.lang]
-    voice = args.voice or cfg['default_voice']
-    language_code = cfg['language_code']
 
     api_key = load_api_key()
 
     if args.list_voices:
-        list_voices(language_code, api_key)
+        cfg = LANG_CONFIG[args.lang]
+        list_voices(cfg['language_code'], api_key)
         return
 
-    audio_dir = os.path.join(AUDIO_ROOT, args.lang)
+    # --all 모드: 모든 lang × gender 조합을 순차 실행
+    if args.all:
+        for lang_code in sorted(LANG_CONFIG.keys()):
+            for g in ('female', 'male'):
+                run_one(lang_code, g, None, args.rate, args.force, api_key)
+        return
+
+    run_one(args.lang, args.gender, args.voice, args.rate, args.force, api_key)
+
+
+def run_one(lang, gender, voice_override, rate, force, api_key):
+    cfg = LANG_CONFIG[lang]
+    voice = voice_override or cfg['voices'][gender]
+    language_code = cfg['language_code']
+
+    audio_dir = os.path.join(AUDIO_ROOT, lang, gender)
     manifest_path = os.path.join(audio_dir, 'manifest.json')
     os.makedirs(audio_dir, exist_ok=True)
 
@@ -193,34 +220,33 @@ def main():
         js = f.read()
 
     phrases = extract_phrases(js)
-    # 해당 언어 필드가 있는 항목만 대상으로, 중복 제거
     seen = set()
     unique = []
     for p in phrases:
-        text = p.get(args.lang)
+        text = p.get(lang)
         if not text or text in seen:
             continue
         seen.add(text)
         unique.append(p)
 
-    print(f'[{args.lang}] 총 {len(unique)}개 고유 문장 · 음성 {voice} · 속도 {args.rate}x')
+    print(f'[{lang}/{gender}] 총 {len(unique)}개 · 음성 {voice} · 속도 {rate}x')
 
     manifest = {}
     created = skipped = failed = 0
 
     for i, p in enumerate(unique, 1):
-        text = p[args.lang]
+        text = p[lang]
         fname = hash_name(text, voice)
         fpath = os.path.join(audio_dir, fname)
         manifest[text] = fname
 
-        if os.path.exists(fpath) and not args.force:
+        if os.path.exists(fpath) and not force:
             skipped += 1
             continue
 
         print(f'[{i:3d}/{len(unique)}] {text[:45]}')
         try:
-            audio = synthesize(text, language_code, voice, args.rate, api_key)
+            audio = synthesize(text, language_code, voice, rate, api_key)
             with open(fpath, 'wb') as fo:
                 fo.write(audio)
             created += 1

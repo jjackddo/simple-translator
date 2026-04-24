@@ -89,12 +89,14 @@ header {
   justify-content: space-between;
   margin-bottom: 12px;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .title-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 h1 {
@@ -106,8 +108,9 @@ h1 {
   color: var(--ink);
 }
 
-/* Language toggle — PROMINENT segmented pill */
-.lang-toggle {
+/* Segmented toggles — language & gender share same shell */
+.lang-toggle,
+.gender-toggle {
   display: inline-flex;
   background: var(--surface);
   border: 1px solid var(--hair-strong);
@@ -118,7 +121,8 @@ h1 {
   position: relative;
 }
 
-.lang-btn {
+.lang-btn,
+.gender-btn {
   appearance: none;
   border: none;
   background: transparent;
@@ -131,21 +135,32 @@ h1 {
   opacity: 1;
   transition: background 0.18s ease, transform 0.1s ease, color 0.15s ease;
   font-weight: 700;
-  min-width: 40px;
+  min-width: 36px;
   min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  filter: grayscale(0.6);
+  font-family: inherit;
 }
-.lang-btn:active { transform: scale(0.92); }
-.lang-btn.active {
+.lang-btn { filter: grayscale(0.6); }
+.lang-btn.active { filter: grayscale(0); }
+
+.lang-btn:active,
+.gender-btn:active { transform: scale(0.92); }
+
+.lang-btn.active,
+.gender-btn.active {
   background: var(--ink);
   color: #fff;
   opacity: 1;
   box-shadow: 0 2px 6px rgba(42, 26, 20, 0.25);
-  filter: grayscale(0);
 }
+
+/* Subtle tint to help scan-ability */
+.gender-btn[data-gender="female"] { color: #B85577; }
+.gender-btn[data-gender="male"]   { color: #3B6EC9; }
+.gender-btn.active[data-gender="female"] { background: #B85577; color: #fff; }
+.gender-btn.active[data-gender="male"]   { background: #3B6EC9; color: #fff; }
 
 /* Help button — soft circle */
 .help-btn {
@@ -956,6 +971,12 @@ footer {
     background: var(--coral);
     color: #fff;
   }
+
+  /* 다크모드 — 성별 토글 톤 다운 */
+  .gender-btn[data-gender="female"] { color: #F093B0; }
+  .gender-btn[data-gender="male"]   { color: #8AB0FF; }
+  .gender-btn.active[data-gender="female"] { background: #B85577; color: #fff; }
+  .gender-btn.active[data-gender="male"]   { background: #3B6EC9; color: #fff; }
 
   /* Phrase playing glow slightly stronger */
   .phrase.playing {

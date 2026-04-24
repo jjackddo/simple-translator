@@ -4,10 +4,14 @@ const LANG_CONFIG = {
   ja: { code: 'ja-JP', label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
 };
 const LANG_STORAGE_KEY = 'vn-phrasebook-lang';
+const GENDER_STORAGE_KEY = 'vn-phrasebook-gender';
 const VOICE_PREF_KEY_PREFIX = 'vn-phrasebook-voice-';
 
 let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'vi';
 if (!LANG_CONFIG[currentLang]) currentLang = 'vi';
+
+let currentGender = localStorage.getItem(GENDER_STORAGE_KEY) || 'female';
+if (currentGender !== 'female' && currentGender !== 'male') currentGender = 'female';
 
 function langCode() { return LANG_CONFIG[currentLang].code; }
 
@@ -122,7 +126,7 @@ function ensureAudioGraph() {
 async function loadAudioManifest() {
   audioManifest = {};
   try {
-    const resp = await fetch(`audio/${currentLang}/manifest.json`, { cache: 'no-cache' });
+    const resp = await fetch(`audio/${currentLang}/${currentGender}/manifest.json`, { cache: 'no-cache' });
     if (resp.ok) audioManifest = await resp.json();
   } catch (e) {
     // MP3 없음 — TTS로 폴백
@@ -142,7 +146,7 @@ function stopAudio() {
 function play(text) {
   stopAudio();
   const fname = audioManifest[text];
-  const audioPath = fname ? `audio/${currentLang}/${fname}` : null;
+  const audioPath = fname ? `audio/${currentLang}/${currentGender}/${fname}` : null;
   if (audioPath) {
     const graphOk = ensureAudioGraph();
     if (graphOk && sharedAudio) {
@@ -423,7 +427,7 @@ async function preloadAllAudio(progressCb) {
   let ok = 0;
   for (let i = 0; i < files.length; i++) {
     try {
-      const resp = await fetch(`audio/${currentLang}/${files[i]}`, { cache: 'reload' });
+      const resp = await fetch(`audio/${currentLang}/${currentGender}/${files[i]}`, { cache: 'reload' });
       if (resp.ok) ok++;
     } catch (e) { /* ignore */ }
     if (progressCb) progressCb(i + 1, files.length);
@@ -669,6 +673,31 @@ function setupLangToggle() {
   applyLangUI();
 }
 
+// ========== 성별 토글 ==========
+function applyGenderUI() {
+  document.querySelectorAll('[data-gender]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.gender === currentGender);
+    btn.setAttribute('aria-pressed', btn.dataset.gender === currentGender ? 'true' : 'false');
+  });
+}
+
+async function switchGender(newGender) {
+  if (newGender !== 'female' && newGender !== 'male') return;
+  if (newGender === currentGender) return;
+  stopAudio();
+  currentGender = newGender;
+  localStorage.setItem(GENDER_STORAGE_KEY, newGender);
+  applyGenderUI();
+  await loadAudioManifest();
+}
+
+function setupGenderToggle() {
+  document.querySelectorAll('[data-gender]').forEach(btn => {
+    btn.addEventListener('click', () => switchGender(btn.dataset.gender));
+  });
+  applyGenderUI();
+}
+
 // ========== 도움말 모달 ==========
 function setupHelp() {
   const btn = document.getElementById('help-btn');
@@ -707,6 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
   render();
   setupSearch();
   setupLangToggle();
+  setupGenderToggle();
   setupVoicePicker();
   setupInputModal();
   setupListenModal();
