@@ -1,6 +1,6 @@
 // MP3(해시 기반, 내용 불변) → 캐시 우선
 // 그 외 리소스 → 네트워크 우선 (업데이트 즉시 반영, 오프라인엔 캐시 폴백)
-const CACHE = 'vn-phrasebook-v12';
+const CACHE = 'vn-phrasebook-v13';
 const PRECACHE = [
   './',
   './index.html',

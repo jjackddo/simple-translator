@@ -4,22 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#da251d" />
-  <title>베트남 여행 회화</title>
+  <title>여행 회화</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="베트남 회화" />
+  <meta name="apple-mobile-web-app-title" content="여행 회화" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <div class="title-row">
-      <h1>🇻🇳 베트남 여행 회화</h1>
-      <button id="help-btn" class="help-btn" aria-label="도움말 열기" title="도움말">?</button>
+      <h1 id="app-title">🇻🇳 베트남 여행 회화</h1>
+      <div class="title-actions">
+        <div class="lang-toggle" role="group" aria-label="언어 선택">
+          <button type="button" class="lang-btn" data-lang="vi" aria-pressed="true">🇻🇳</button>
+          <button type="button" class="lang-btn" data-lang="ja" aria-pressed="false">🇯🇵</button>
+        </div>
+        <button id="help-btn" class="help-btn" aria-label="도움말 열기" title="도움말">?</button>
+      </div>
     </div>
-    <input id="search" type="search" placeholder="🔍 한국어 또는 베트남어로 검색" aria-label="검색" />
+    <input id="search" type="search" placeholder="🔍 검색 (한국어/현지어)" aria-label="검색" />
     <div class="controls">
       <label id="voice-wrap" class="voice" hidden>
         <span>음성</span>

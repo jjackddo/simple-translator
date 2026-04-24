@@ -1,34 +1,45 @@
-// ========== TTS (Text-to-Speech) ==========
-const VOICE_PREF_KEY = 'vn-phrasebook-voice';
-let vietnameseVoices = [];
-let vietnameseVoice = null;
+// ========== 언어 설정 ==========
+const LANG_CONFIG = {
+  vi: { code: 'vi-VN', label: '🇻🇳 베트남어', title: '베트남 여행 회화', voiceQualityNames: /linh|hoaimy|namminh|lien/i },
+  ja: { code: 'ja-JP', label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
+};
+const LANG_STORAGE_KEY = 'vn-phrasebook-lang';
+const VOICE_PREF_KEY_PREFIX = 'vn-phrasebook-voice-';
 
-// 음성 품질 점수 — 높을수록 선호
+let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'vi';
+if (!LANG_CONFIG[currentLang]) currentLang = 'vi';
+
+function langCode() { return LANG_CONFIG[currentLang].code; }
+
+// ========== TTS (Text-to-Speech) ==========
+let availableVoices = [];   // 현재 언어에 맞는 음성 목록
+let selectedVoice = null;
+
 function scoreVoice(v) {
-  let s = 0;
+  const cfg = LANG_CONFIG[currentLang];
   const name = (v.name || '').toLowerCase();
-  if (v.lang === 'vi-VN') s += 10;
-  else if ((v.lang || '').startsWith('vi')) s += 5;
-  // 향상된/프리미엄 키워드
+  let s = 0;
+  if (v.lang === cfg.code) s += 10;
+  else if ((v.lang || '').startsWith(currentLang)) s += 5;
   if (/enhanced|premium|neural|natural/i.test(name)) s += 20;
   if (/\(enhanced\)|\(premium\)/i.test(v.name || '')) s += 20;
-  // 알려진 품질 좋은 베트남어 음성 이름
-  if (/linh|hoaimy|namminh|lien/i.test(name)) s += 3;
-  // 네트워크 음성(Google 등)은 기본 로컬보다 보통 더 자연스러움
+  if (cfg.voiceQualityNames.test(name)) s += 3;
   if (v.localService === false) s += 2;
   return s;
 }
 
-function refreshVietnameseVoices() {
+function refreshVoices() {
+  if (typeof speechSynthesis === 'undefined') return;
   const all = speechSynthesis.getVoices();
-  vietnameseVoices = all
-    .filter(v => (v.lang || '').toLowerCase().startsWith('vi'))
+  const prefix = currentLang;
+  availableVoices = all
+    .filter(v => (v.lang || '').toLowerCase().startsWith(prefix))
     .sort((a, b) => scoreVoice(b) - scoreVoice(a));
 
-  const saved = localStorage.getItem(VOICE_PREF_KEY);
-  vietnameseVoice =
-    (saved && vietnameseVoices.find(v => v.name === saved)) ||
-    vietnameseVoices[0] ||
+  const saved = localStorage.getItem(VOICE_PREF_KEY_PREFIX + currentLang);
+  selectedVoice =
+    (saved && availableVoices.find(v => v.name === saved)) ||
+    availableVoices[0] ||
     null;
 
   renderVoicePicker();
@@ -39,26 +50,25 @@ function renderVoicePicker() {
   const select = document.getElementById('voice');
   if (!wrap || !select) return;
 
-  if (vietnameseVoices.length <= 1) {
+  if (availableVoices.length <= 1) {
     wrap.hidden = true;
     return;
   }
   wrap.hidden = false;
   select.innerHTML = '';
-  vietnameseVoices.forEach(v => {
+  availableVoices.forEach(v => {
     const opt = document.createElement('option');
     opt.value = v.name;
     const hq = /enhanced|premium|neural|natural/i.test(v.name) ? ' ⭐' : '';
     opt.textContent = `${v.name} (${v.lang})${hq}`;
-    if (vietnameseVoice && v.name === vietnameseVoice.name) opt.selected = true;
+    if (selectedVoice && v.name === selectedVoice.name) opt.selected = true;
     select.appendChild(opt);
   });
 }
 
-// iOS/Safari는 getVoices()가 최초에 빈 배열일 수 있음
 if (typeof speechSynthesis !== 'undefined') {
-  refreshVietnameseVoices();
-  speechSynthesis.onvoiceschanged = refreshVietnameseVoices;
+  refreshVoices();
+  speechSynthesis.onvoiceschanged = refreshVoices;
 }
 
 const currentRate = 0.9;  // 고정 재생 속도
@@ -68,12 +78,12 @@ function speak(text) {
     alert('이 브라우저는 음성 합성을 지원하지 않습니다.');
     return;
   }
-  speechSynthesis.cancel(); // 이전 재생 중단
+  speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = (vietnameseVoice && vietnameseVoice.lang) || 'vi-VN';
+  u.lang = (selectedVoice && selectedVoice.lang) || langCode();
   u.rate = currentRate;
   u.pitch = 1.0;
-  if (vietnameseVoice) u.voice = vietnameseVoice;
+  if (selectedVoice) u.voice = selectedVoice;
   speechSynthesis.speak(u);
 }
 
@@ -110,8 +120,9 @@ function ensureAudioGraph() {
 }
 
 async function loadAudioManifest() {
+  audioManifest = {};
   try {
-    const resp = await fetch('audio/manifest.json', { cache: 'no-cache' });
+    const resp = await fetch(`audio/${currentLang}/manifest.json`, { cache: 'no-cache' });
     if (resp.ok) audioManifest = await resp.json();
   } catch (e) {
     // MP3 없음 — TTS로 폴백
@@ -128,14 +139,15 @@ function stopAudio() {
   stopMeter();
 }
 
-function play(vi) {
+function play(text) {
   stopAudio();
-  const fname = audioManifest[vi];
-  if (fname) {
+  const fname = audioManifest[text];
+  const audioPath = fname ? `audio/${currentLang}/${fname}` : null;
+  if (audioPath) {
     const graphOk = ensureAudioGraph();
     if (graphOk && sharedAudio) {
       if (audioContext.state === 'suspended') audioContext.resume();
-      sharedAudio.src = 'audio/' + fname;
+      sharedAudio.src = audioPath;
       sharedAudio.playbackRate = currentRate;
       sharedAudio.preservesPitch = true;
       currentAudio = sharedAudio;
@@ -143,22 +155,21 @@ function play(vi) {
         startMeter();
       }).catch(err => {
         console.warn('MP3 재생 실패, TTS로 대체:', err);
-        speak(vi);
+        speak(text);
       });
       return;
     }
-    // Web Audio 불가 시 일반 Audio 재생 (미터 없음)
-    const audio = new Audio('audio/' + fname);
+    const audio = new Audio(audioPath);
     audio.playbackRate = currentRate;
     audio.preservesPitch = true;
     currentAudio = audio;
     audio.play().catch(err => {
       console.warn('MP3 재생 실패, TTS로 대체:', err);
-      speak(vi);
+      speak(text);
     });
     return;
   }
-  speak(vi);
+  speak(text);
 }
 
 // ========== 레벨 미터 (재생 중 실시간 신호 감지) ==========
@@ -272,23 +283,33 @@ function render() {
 
     const ul = document.createElement('ul');
     phrases[category].forEach(item => {
+      const target = item[currentLang];
+      if (!target) return;  // 해당 언어 번역이 없으면 숨김
       const li = document.createElement('li');
       li.className = 'phrase';
       li.innerHTML = `
-        <div class="ko">${item.ko}</div>
-        <div class="vi">${item.vi}</div>
+        <div class="ko">${escapeHtml(item.ko)}</div>
+        <div class="vi">${escapeHtml(target)}</div>
         <div class="speaker" aria-hidden="true">🔊</div>
       `;
       li.onclick = () => {
-        play(item.vi);
+        play(target);
         li.classList.add('playing');
         setTimeout(() => li.classList.remove('playing'), 800);
       };
       ul.appendChild(li);
     });
+    // 렌더된 항목이 하나도 없으면 섹션 자체 숨김
+    if (ul.children.length === 0) return;
     section.appendChild(ul);
     container.appendChild(section);
   });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
 }
 
 // ========== 검색 ==========
@@ -314,12 +335,12 @@ function setupVoicePicker() {
   const select = document.getElementById('voice');
   if (!select) return;
   select.addEventListener('change', e => {
-    const picked = vietnameseVoices.find(v => v.name === e.target.value);
+    const picked = availableVoices.find(v => v.name === e.target.value);
     if (picked) {
-      vietnameseVoice = picked;
-      localStorage.setItem(VOICE_PREF_KEY, picked.name);
-      // 미리듣기 — 음성 선택 변경 시 TTS 테스트이므로 직접 speak 사용
-      speak('Xin chào');
+      selectedVoice = picked;
+      localStorage.setItem(VOICE_PREF_KEY_PREFIX + currentLang, picked.name);
+      // 미리듣기 — TTS 테스트이므로 직접 speak 사용
+      speak(currentLang === 'ja' ? 'こんにちは' : 'Xin chào');
     }
   });
 }
@@ -402,7 +423,7 @@ async function preloadAllAudio(progressCb) {
   let ok = 0;
   for (let i = 0; i < files.length; i++) {
     try {
-      const resp = await fetch('audio/' + files[i], { cache: 'reload' });
+      const resp = await fetch(`audio/${currentLang}/${files[i]}`, { cache: 'reload' });
       if (resp.ok) ok++;
     } catch (e) { /* ignore */ }
     if (progressCb) progressCb(i + 1, files.length);
@@ -477,10 +498,10 @@ function setupInputModal() {
     viBox.textContent = '';
     translateBtn.disabled = true;
     try {
-      const vi = await translate(text, 'ko', 'vi');
-      viBox.textContent = vi;
+      const translated = await translate(text, 'ko', currentLang);
+      viBox.textContent = translated;
       statusEl.textContent = '';
-      speak(vi);
+      play(translated);
     } catch (e) {
       if (e.message === 'NO_KEY') {
         statusEl.textContent = '키가 필요합니다';
@@ -562,7 +583,7 @@ function setupListenModal() {
     startBtn.classList.add('recording');
 
     recognition = new SR();
-    recognition.lang = 'vi-VN';
+    recognition.lang = langCode();
     recognition.interimResults = true;
     recognition.continuous = false;
 
@@ -578,7 +599,7 @@ function setupListenModal() {
       if (final) {
         statusEl.textContent = '번역 중...';
         try {
-          const ko = await translate(final, 'vi', 'ko');
+          const ko = await translate(final, currentLang, 'ko');
           koBox.textContent = ko;
           statusEl.textContent = '';
           speakKorean(ko);
@@ -613,6 +634,39 @@ function setupListenModal() {
       recognition = null;
     }
   });
+}
+
+// ========== 언어 토글 ==========
+function applyLangUI() {
+  const cfg = LANG_CONFIG[currentLang];
+  document.title = cfg.title;
+  const titleEl = document.getElementById('app-title');
+  if (titleEl) titleEl.textContent = cfg.label.split(' ')[0] + ' ' + cfg.title;
+  // 토글 버튼 활성 상태
+  document.querySelectorAll('[data-lang]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+    btn.setAttribute('aria-pressed', btn.dataset.lang === currentLang ? 'true' : 'false');
+  });
+  // HTML lang attribute
+  document.documentElement.setAttribute('lang', 'ko');  // UI는 한국어 유지
+}
+
+async function switchLang(newLang) {
+  if (!LANG_CONFIG[newLang] || newLang === currentLang) return;
+  stopAudio();
+  currentLang = newLang;
+  localStorage.setItem(LANG_STORAGE_KEY, newLang);
+  applyLangUI();
+  refreshVoices();
+  await loadAudioManifest();
+  render();
+}
+
+function setupLangToggle() {
+  document.querySelectorAll('[data-lang]').forEach(btn => {
+    btn.addEventListener('click', () => switchLang(btn.dataset.lang));
+  });
+  applyLangUI();
 }
 
 // ========== 도움말 모달 ==========
@@ -652,6 +706,7 @@ function registerSW() {
 document.addEventListener('DOMContentLoaded', () => {
   render();
   setupSearch();
+  setupLangToggle();
   setupVoicePicker();
   setupInputModal();
   setupListenModal();

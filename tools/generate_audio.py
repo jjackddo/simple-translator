@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """
-Google Cloud Text-to-Speech로 phrases.js의 모든 베트남어 문장을 MP3로 생성.
+Google Cloud Text-to-Speech로 phrases.js의 문장을 언어별 MP3로 생성.
 
 사용법:
-  1. 프로젝트 루트에 .env 파일 생성 후 아래 한 줄 작성:
-       GOOGLE_TTS_API_KEY=AIza...여기에_발급받은_키...
-     또는 export GOOGLE_TTS_API_KEY="..." 로 환경변수 설정
+  1. 프로젝트 루트에 .env 파일 작성:
+       GOOGLE_TTS_API_KEY=AIza...
+     또는 export GOOGLE_TTS_API_KEY="..."
 
   2. 실행:
-       python3 tools/generate_audio.py
+       python3 tools/generate_audio.py               # 기본 vi (베트남어)
+       python3 tools/generate_audio.py --lang ja     # 일본어
 
 옵션:
-  --voice NAME    음성 이름 (기본 vi-VN-Neural2-A 여성, vi-VN-Neural2-D 남성)
-  --rate FLOAT    생성 속도 0.25~4.0 (기본 0.9)
+  --lang CODE     언어 (vi | ja). 기본 vi
+  --voice NAME    음성 이름. 미지정 시 언어별 기본값 사용
+  --rate FLOAT    생성 속도 (기본 0.9)
   --force         이미 있는 파일도 재생성
-  --list-voices   사용 가능한 베트남어 음성 목록만 출력하고 종료
+  --list-voices   해당 언어의 음성 목록만 출력
 """
 
 import argparse
@@ -29,12 +31,17 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PHRASES_JS = os.path.join(ROOT, 'phrases.js')
-AUDIO_DIR = os.path.join(ROOT, 'audio')
-MANIFEST_PATH = os.path.join(AUDIO_DIR, 'manifest.json')
+AUDIO_ROOT = os.path.join(ROOT, 'audio')
 ENV_PATH = os.path.join(ROOT, '.env')
 
 TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize'
 VOICES_URL = 'https://texttospeech.googleapis.com/v1/voices'
+
+# 언어별 기본 설정
+LANG_CONFIG = {
+    'vi': {'language_code': 'vi-VN', 'default_voice': 'vi-VN-Neural2-A'},
+    'ja': {'language_code': 'ja-JP', 'default_voice': 'ja-JP-Neural2-B'},
+}
 
 
 def load_api_key():
@@ -57,7 +64,7 @@ def strip_comments(js_text):
     """// 라인 주석과 /* ... */ 블록 주석을 제거 (문자열 리터럴은 건드리지 않음)."""
     out = []
     i, n = 0, len(js_text)
-    in_str = None  # 따옴표 종류
+    in_str = None
     while i < n:
         ch = js_text[i]
         if in_str:
@@ -90,29 +97,45 @@ def strip_comments(js_text):
     return ''.join(out)
 
 
+FIELD_RE = re.compile(
+    r'(?P<key>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*(?P<quote>["\'])(?P<val>(?:\\.|(?!(?P=quote)).)*)(?P=quote)',
+    re.DOTALL,
+)
+
+# 내부에 다른 '{'를 포함하지 않는 리프 객체만 매칭 (즉 개별 항목)
+ITEM_RE = re.compile(r'\{\s*[^{}]*?\bko\s*:[^{}]*?\}', re.DOTALL)
+
+
 def extract_phrases(js_text):
-    """phrases.js에서 { ko: "...", vi: "..." } 객체를 모두 뽑아낸다."""
+    """phrases.js에서 { ko, vi, ja, ... } 항목 객체를 모두 추출."""
     js_text = strip_comments(js_text)
-    pattern = re.compile(
-        r'\{\s*ko\s*:\s*(["\'])(?P<ko>(?:\\.|(?!\1).)*?)\1'
-        r'\s*,\s*vi\s*:\s*(["\'])(?P<vi>(?:\\.|(?!\3).)*?)\3\s*\}',
-        re.DOTALL,
-    )
-    result = []
-    for m in pattern.finditer(js_text):
-        result.append({'ko': m.group('ko'), 'vi': m.group('vi')})
-    return result
+    results = []
+    for m in ITEM_RE.finditer(js_text):
+        item = parse_item(m.group(0))
+        if item and 'ko' in item:
+            results.append(item)
+    return results
 
 
-def hash_name(vi, voice):
-    key = f'{voice}|{vi}'.encode('utf-8')
+def parse_item(block):
+    item = {}
+    for m in FIELD_RE.finditer(block):
+        key = m.group('key')
+        val = m.group('val')
+        val = val.replace('\\"', '"').replace("\\'", "'").replace('\\\\', '\\')
+        item[key] = val
+    return item
+
+
+def hash_name(text, voice):
+    key = f'{voice}|{text}'.encode('utf-8')
     return hashlib.sha1(key).hexdigest()[:12] + '.mp3'
 
 
-def synthesize(text, voice, rate, api_key):
+def synthesize(text, language_code, voice, rate, api_key):
     body = {
         'input': {'text': text},
-        'voice': {'languageCode': 'vi-VN', 'name': voice},
+        'voice': {'languageCode': language_code, 'name': voice},
         'audioConfig': {
             'audioEncoding': 'MP3',
             'speakingRate': rate,
@@ -133,62 +156,71 @@ def synthesize(text, voice, rate, api_key):
         raise RuntimeError(f'HTTP {e.code} {e.reason}\n{detail}')
 
 
-def list_voices(api_key):
-    req = urllib.request.Request(f'{VOICES_URL}?languageCode=vi-VN&key={api_key}')
+def list_voices(language_code, api_key):
+    req = urllib.request.Request(f'{VOICES_URL}?languageCode={language_code}&key={api_key}')
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.load(resp)
-    print(f"{'이름':<25} {'성별':<8} 샘플레이트")
-    print('-' * 45)
+    print(f"{'이름':<28} {'성별':<8} 샘플레이트")
+    print('-' * 48)
     for v in data.get('voices', []):
-        print(f"{v['name']:<25} {v['ssmlGender']:<8} {v.get('naturalSampleRateHertz','?')}")
+        print(f"{v['name']:<28} {v['ssmlGender']:<8} {v.get('naturalSampleRateHertz','?')}")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--voice', default='vi-VN-Neural2-A')
+    parser.add_argument('--lang', default='vi', choices=sorted(LANG_CONFIG.keys()))
+    parser.add_argument('--voice', default=None)
     parser.add_argument('--rate', type=float, default=0.9)
     parser.add_argument('--force', action='store_true')
     parser.add_argument('--list-voices', action='store_true')
     args = parser.parse_args()
 
+    cfg = LANG_CONFIG[args.lang]
+    voice = args.voice or cfg['default_voice']
+    language_code = cfg['language_code']
+
     api_key = load_api_key()
 
     if args.list_voices:
-        list_voices(api_key)
+        list_voices(language_code, api_key)
         return
 
-    os.makedirs(AUDIO_DIR, exist_ok=True)
+    audio_dir = os.path.join(AUDIO_ROOT, args.lang)
+    manifest_path = os.path.join(audio_dir, 'manifest.json')
+    os.makedirs(audio_dir, exist_ok=True)
 
     with open(PHRASES_JS, encoding='utf-8') as f:
         js = f.read()
 
     phrases = extract_phrases(js)
-    # vi 기준 중복 제거
+    # 해당 언어 필드가 있는 항목만 대상으로, 중복 제거
     seen = set()
     unique = []
     for p in phrases:
-        if p['vi'] not in seen:
-            seen.add(p['vi'])
-            unique.append(p)
+        text = p.get(args.lang)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        unique.append(p)
 
-    print(f'총 {len(unique)}개 고유 문장 · 음성 {args.voice} · 속도 {args.rate}x')
+    print(f'[{args.lang}] 총 {len(unique)}개 고유 문장 · 음성 {voice} · 속도 {args.rate}x')
 
     manifest = {}
     created = skipped = failed = 0
 
     for i, p in enumerate(unique, 1):
-        vi = p['vi']
-        fname = hash_name(vi, args.voice)
-        fpath = os.path.join(AUDIO_DIR, fname)
-        manifest[vi] = fname
+        text = p[args.lang]
+        fname = hash_name(text, voice)
+        fpath = os.path.join(audio_dir, fname)
+        manifest[text] = fname
 
         if os.path.exists(fpath) and not args.force:
             skipped += 1
             continue
 
-        print(f'[{i:3d}/{len(unique)}] {vi[:45]}')
+        print(f'[{i:3d}/{len(unique)}] {text[:45]}')
         try:
-            audio = synthesize(vi, args.voice, args.rate, api_key)
+            audio = synthesize(text, language_code, voice, args.rate, api_key)
             with open(fpath, 'wb') as fo:
                 fo.write(audio)
             created += 1
@@ -196,12 +228,12 @@ def main():
             failed += 1
             print(f'  ✗ 실패: {e}', file=sys.stderr)
 
-    with open(MANIFEST_PATH, 'w', encoding='utf-8') as f:
+    with open(manifest_path, 'w', encoding='utf-8') as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
 
     print()
     print(f'생성 {created} · 스킵 {skipped} · 실패 {failed}')
-    print(f'매니페스트: {os.path.relpath(MANIFEST_PATH, ROOT)}')
+    print(f'매니페스트: {os.path.relpath(manifest_path, ROOT)}')
 
 
 if __name__ == '__main__':
