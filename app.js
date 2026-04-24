@@ -228,7 +228,14 @@ const TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2'
 const BROWSER_KEY_STORAGE = 'vn-phrasebook-browser-api-key';
 
 function getBrowserApiKey() {
-  return localStorage.getItem(BROWSER_KEY_STORAGE) || '';
+  // 1) 개인 기기 오버라이드 (localStorage)
+  const stored = localStorage.getItem(BROWSER_KEY_STORAGE);
+  if (stored) return stored;
+  // 2) config.js 기본값 (referrer 제한으로 공개 안전)
+  if (window.APP_CONFIG && window.APP_CONFIG.GOOGLE_API_KEY) {
+    return window.APP_CONFIG.GOOGLE_API_KEY;
+  }
+  return '';
 }
 
 function setBrowserApiKey(key) {
