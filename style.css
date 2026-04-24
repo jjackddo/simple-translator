@@ -146,12 +146,10 @@ h1 {
 
 nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding: 4px 0 10px;
-  scrollbar-width: none;
 }
-nav::-webkit-scrollbar { display: none; }
 
 .tab {
   flex: 0 0 auto;
