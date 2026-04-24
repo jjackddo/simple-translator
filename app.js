@@ -84,10 +84,7 @@ let currentAudio = null;
 async function loadAudioManifest() {
   try {
     const resp = await fetch('audio/manifest.json', { cache: 'no-cache' });
-    if (resp.ok) {
-      audioManifest = await resp.json();
-      updateAudioStatus();
-    }
+    if (resp.ok) audioManifest = await resp.json();
   } catch (e) {
     // MP3 없음 — TTS로 폴백
   }
@@ -117,19 +114,6 @@ function play(vi) {
     return;
   }
   speak(vi);
-}
-
-function updateAudioStatus() {
-  const el = document.getElementById('audio-status');
-  if (!el) return;
-  const count = Object.keys(audioManifest).length;
-  if (count > 0) {
-    el.textContent = `🔊 고품질 음성 ${count}개`;
-    el.className = 'status-pill hq';
-  } else {
-    el.textContent = '📱 기기 음성';
-    el.className = 'status-pill tts';
-  }
 }
 
 // ========== 렌더링 ==========
