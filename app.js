@@ -61,7 +61,7 @@ if (typeof speechSynthesis !== 'undefined') {
   speechSynthesis.onvoiceschanged = refreshVietnameseVoices;
 }
 
-let currentRate = 0.9;
+const currentRate = 0.9;  // 고정 재생 속도
 
 function speak(text) {
   if (!('speechSynthesis' in window)) {
@@ -179,16 +179,6 @@ function setupSearch() {
       const visible = [...sec.querySelectorAll('.phrase')].some(p => p.style.display !== 'none');
       sec.style.display = visible ? '' : 'none';
     });
-  });
-}
-
-// ========== 속도 조절 ==========
-function setupRate() {
-  const slider = document.getElementById('rate');
-  const label = document.getElementById('rate-label');
-  slider.addEventListener('input', e => {
-    currentRate = parseFloat(e.target.value);
-    label.textContent = currentRate.toFixed(1) + 'x';
   });
 }
 
@@ -535,7 +525,6 @@ function registerSW() {
 document.addEventListener('DOMContentLoaded', () => {
   render();
   setupSearch();
-  setupRate();
   setupVoicePicker();
   setupInputModal();
   setupListenModal();
