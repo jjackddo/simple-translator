@@ -1,5 +1,5 @@
 // 오프라인용 서비스 워커. 캐시 버전을 올리면 업데이트 반영됨.
-const CACHE = 'vn-phrasebook-v5';
+const CACHE = 'vn-phrasebook-v6';
 const ASSETS = [
   './',
   './index.html',

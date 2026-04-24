@@ -14,7 +14,7 @@ html, body {
 }
 
 body {
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
   padding-top: env(safe-area-inset-top);
 }
 
@@ -253,6 +253,159 @@ footer {
   padding: 20px 16px 30px;
 }
 
+/* ===== Bottom action bar ===== */
+.action-bar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid #e4e4e4;
+  z-index: 20;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  background: #da251d;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 56px;
+}
+.action-btn:active {
+  background: #b51e18;
+  transform: scale(0.98);
+}
+.action-icon { font-size: 22px; line-height: 1; }
+.action-label { font-size: 13px; }
+
+/* ===== Form & result blocks (used inside input/listen modals) ===== */
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 10px 0 6px;
+}
+
+#input-ko {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+#input-ko:focus {
+  outline: none;
+  border-color: #da251d;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 14px 16px;
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  background: #da251d;
+  color: #fff;
+  cursor: pointer;
+}
+.primary-btn:active { background: #b51e18; }
+.primary-btn:disabled { background: #bbb; cursor: wait; }
+.primary-btn.big {
+  padding: 20px;
+  font-size: 18px;
+}
+.primary-btn.big.recording {
+  background: #1e7f38;
+  animation: recordPulse 1.2s ease-in-out infinite;
+}
+@keyframes recordPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(30,127,56,0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(30,127,56,0); }
+}
+
+.secondary-btn {
+  padding: 8px 14px;
+  margin-top: 8px;
+  font-size: 14px;
+  border: 1px solid #da251d;
+  border-radius: 8px;
+  background: #fff;
+  color: #da251d;
+  cursor: pointer;
+  font-weight: 500;
+}
+.secondary-btn:active { background: #fff5f4; }
+
+.result-block {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f7f7f8;
+  border-radius: 10px;
+}
+
+.result-text {
+  font-size: 17px;
+  font-weight: 500;
+  color: #1a1a1a;
+  min-height: 28px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.status-line {
+  margin: 10px 0;
+  font-size: 13px;
+  color: #666;
+  min-height: 18px;
+}
+
+.key-setup {
+  margin-bottom: 16px;
+  padding: 14px;
+  background: #fff8e1;
+  border: 1px solid #f0d060;
+  border-radius: 10px;
+}
+.key-setup p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+.key-setup .key-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #d0b040;
+  border-radius: 8px;
+  font-family: ui-monospace, Menlo, monospace;
+  box-sizing: border-box;
+}
+.key-setup .key-save {
+  margin-top: 8px;
+}
+
 /* ===== Help modal ===== */
 .modal[hidden] { display: none; }
 
@@ -427,6 +580,33 @@ footer {
   .modal-body code {
     background: #2a2a2a;
     color: #ddd;
+  }
+  .action-bar {
+    background: rgba(30,30,30,0.96);
+    border-top-color: #333;
+  }
+  .form-label { color: #aaa; }
+  #input-ko {
+    background: #2a2a2a;
+    color: #eee;
+    border-color: #3a3a3a;
+  }
+  .result-block { background: #252525; }
+  .result-text { color: #eee; }
+  .secondary-btn {
+    background: transparent;
+    color: #ff6b63;
+    border-color: #ff6b63;
+  }
+  .key-setup {
+    background: #3a2f15;
+    border-color: #8a6b2f;
+  }
+  .key-setup p { color: #ddd; }
+  .key-setup .key-input {
+    background: #1e1e1e;
+    color: #eee;
+    border-color: #8a6b2f;
   }
 }
 

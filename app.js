@@ -223,6 +223,70 @@ function setupVoicePicker() {
   });
 }
 
+// ========== 번역 (Google Cloud Translation API v2) ==========
+const TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
+const BROWSER_KEY_STORAGE = 'vn-phrasebook-browser-api-key';
+
+function getBrowserApiKey() {
+  return localStorage.getItem(BROWSER_KEY_STORAGE) || '';
+}
+
+function setBrowserApiKey(key) {
+  localStorage.setItem(BROWSER_KEY_STORAGE, key);
+}
+
+async function translate(text, source, target) {
+  const key = getBrowserApiKey();
+  if (!key) throw new Error('NO_KEY');
+  const resp = await fetch(`${TRANSLATE_URL}?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: text, source, target, format: 'text' }),
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`번역 API 오류 (${resp.status}): ${txt.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  return data.data.translations[0].translatedText;
+}
+
+function speakKorean(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR';
+  u.rate = currentRate;
+  speechSynthesis.speak(u);
+}
+
+// 키가 없을 때 모달 바디 맨 위에 설정 폼을 삽입
+function renderKeySetup(container, onSaved) {
+  const existing = container.querySelector('.key-setup');
+  if (existing) existing.remove();
+  if (getBrowserApiKey()) return false;
+  const box = document.createElement('div');
+  box.className = 'key-setup';
+  box.innerHTML = `
+    <p><strong>🔑 번역 API 키 설정이 필요합니다.</strong>
+       도움말(?)의 "번역 기능 API 키 설정"을 먼저 따라해주세요.</p>
+    <input type="password" class="key-input" placeholder="AIza... (브라우저용 키)" autocomplete="off" />
+    <button type="button" class="primary-btn key-save">저장</button>
+  `;
+  container.prepend(box);
+  box.querySelector('.key-save').addEventListener('click', () => {
+    const val = box.querySelector('.key-input').value.trim();
+    if (!val.startsWith('AIza')) {
+      alert('키 형식이 올바르지 않습니다 (AIza로 시작해야 함)');
+      return;
+    }
+    setBrowserApiKey(val);
+    box.remove();
+    if (onSaved) onSaved();
+  });
+  return true;
+}
+
 // ========== 오프라인 프리로드 (모든 MP3 미리 캐시) ==========
 async function preloadAllAudio(progressCb) {
   const files = [...new Set(Object.values(audioManifest))];
@@ -257,6 +321,189 @@ function setupPreloadButton() {
       btn.disabled = false;
       btn.textContent = '📥 오프라인용 전체 음성 다운로드';
     }, 4000);
+  });
+}
+
+// ========== 입력 모달 (한국어 → 베트남어) ==========
+function setupInputModal() {
+  const btn = document.getElementById('input-btn');
+  const modal = document.getElementById('input-modal');
+  if (!btn || !modal) return;
+
+  const body = modal.querySelector('.modal-body');
+  const textarea = document.getElementById('input-ko');
+  const viBox = document.getElementById('input-vi');
+  const statusEl = document.getElementById('input-status');
+  const translateBtn = document.getElementById('input-translate-btn');
+  const speakBtn = document.getElementById('input-speak-btn');
+
+  const refresh = () => renderKeySetup(body);
+
+  const open = () => {
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    viBox.textContent = '';
+    statusEl.textContent = '';
+    refresh();
+    setTimeout(() => {
+      if (getBrowserApiKey()) textarea.focus();
+    }, 100);
+  };
+  const close = () => {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    stopAudio();
+  };
+
+  btn.addEventListener('click', open);
+  modal.addEventListener('click', e => { if (e.target.dataset.close) close(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+
+  translateBtn.addEventListener('click', async () => {
+    const text = textarea.value.trim();
+    if (!text) return;
+    if (!getBrowserApiKey()) { refresh(); return; }
+    statusEl.textContent = '번역 중...';
+    viBox.textContent = '';
+    translateBtn.disabled = true;
+    try {
+      const vi = await translate(text, 'ko', 'vi');
+      viBox.textContent = vi;
+      statusEl.textContent = '';
+      speak(vi);
+    } catch (e) {
+      if (e.message === 'NO_KEY') {
+        statusEl.textContent = '키가 필요합니다';
+        refresh();
+      } else {
+        statusEl.textContent = '❌ ' + e.message;
+      }
+    } finally {
+      translateBtn.disabled = false;
+    }
+  });
+
+  speakBtn.addEventListener('click', () => {
+    const vi = viBox.textContent.trim();
+    if (vi) speak(vi);
+  });
+}
+
+// ========== 듣기 모달 (베트남어 마이크 → 한국어 번역) ==========
+function setupListenModal() {
+  const btn = document.getElementById('listen-btn');
+  const modal = document.getElementById('listen-modal');
+  if (!btn || !modal) return;
+
+  const body = modal.querySelector('.modal-body');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const startBtn = document.getElementById('listen-start-btn');
+  const viBox = document.getElementById('listen-vi');
+  const koBox = document.getElementById('listen-ko');
+  const statusEl = document.getElementById('listen-status');
+  let recognition = null;
+
+  const resetUI = () => {
+    startBtn.textContent = '🎤 말하기 시작';
+    startBtn.classList.remove('recording');
+  };
+
+  const refresh = () => renderKeySetup(body);
+
+  const open = () => {
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    viBox.textContent = '';
+    koBox.textContent = '';
+    refresh();
+    if (!SR) {
+      statusEl.textContent = '⚠️ 이 브라우저는 음성 인식을 지원하지 않습니다 (iOS 14.5+/Chrome 권장)';
+      startBtn.disabled = true;
+    } else if (!getBrowserApiKey()) {
+      statusEl.textContent = '🔑 위의 API 키 설정을 먼저 완료하세요';
+      startBtn.disabled = true;
+    } else {
+      statusEl.textContent = '버튼을 누르고 상대방 말을 들려주세요';
+      startBtn.disabled = false;
+    }
+    resetUI();
+  };
+  const close = () => {
+    if (recognition) { try { recognition.stop(); } catch {} recognition = null; }
+    speechSynthesis.cancel();
+    modal.hidden = true;
+    document.body.style.overflow = '';
+  };
+
+  btn.addEventListener('click', open);
+  modal.addEventListener('click', e => { if (e.target.dataset.close) close(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (!SR || !getBrowserApiKey()) return;
+    if (recognition) { recognition.stop(); return; }
+
+    viBox.textContent = '';
+    koBox.textContent = '';
+    statusEl.textContent = '🎤 듣는 중... (말이 끝나면 자동 정지)';
+    startBtn.textContent = '⏹ 정지';
+    startBtn.classList.add('recording');
+
+    recognition = new SR();
+    recognition.lang = 'vi-VN';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onresult = async (ev) => {
+      let interim = '';
+      let final = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const r = ev.results[i];
+        if (r.isFinal) final += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      viBox.textContent = final || interim;
+      if (final) {
+        statusEl.textContent = '번역 중...';
+        try {
+          const ko = await translate(final, 'vi', 'ko');
+          koBox.textContent = ko;
+          statusEl.textContent = '';
+          speakKorean(ko);
+        } catch (e) {
+          statusEl.textContent = '❌ ' + e.message;
+        }
+      }
+    };
+    recognition.onerror = (ev) => {
+      const map = {
+        'no-speech': '소리가 감지되지 않았습니다',
+        'not-allowed': '마이크 권한이 없습니다 (브라우저 설정 확인)',
+        'network': '네트워크 연결 필요',
+        'audio-capture': '마이크를 찾을 수 없습니다',
+      };
+      statusEl.textContent = '❌ ' + (map[ev.error] || ev.error);
+      resetUI();
+      recognition = null;
+    };
+    recognition.onend = () => {
+      resetUI();
+      if (!statusEl.textContent.startsWith('번역') && !statusEl.textContent.startsWith('❌')) {
+        statusEl.textContent = viBox.textContent ? '' : '다시 시도하세요';
+      }
+      recognition = null;
+    };
+    try {
+      recognition.start();
+    } catch (e) {
+      statusEl.textContent = '❌ 시작 실패: ' + e.message;
+      resetUI();
+      recognition = null;
+    }
   });
 }
 
@@ -299,6 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSearch();
   setupRate();
   setupVoicePicker();
+  setupInputModal();
+  setupListenModal();
   setupHelp();
   setupPreloadButton();
   registerSW();
