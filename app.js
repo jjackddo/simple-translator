@@ -81,6 +81,34 @@ function speak(text) {
 let audioManifest = {};   // { "Xin chào": "abc123.mp3", ... }
 let currentAudio = null;
 
+// Web Audio 그래프 (레벨 미터용). 최초 재생 직전에 사용자 제스처로 초기화.
+let audioContext = null;
+let analyserNode = null;
+let sharedAudio = null;
+let analyserData = null;
+
+function ensureAudioGraph() {
+  if (audioContext) return true;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return false;
+  try {
+    audioContext = new Ctx();
+    sharedAudio = new Audio();
+    sharedAudio.preload = 'auto';
+    const src = audioContext.createMediaElementSource(sharedAudio);
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 256;
+    analyserData = new Uint8Array(analyserNode.frequencyBinCount);
+    src.connect(analyserNode);
+    analyserNode.connect(audioContext.destination);
+    return true;
+  } catch (e) {
+    console.warn('Web Audio 초기화 실패:', e);
+    audioContext = null;
+    return false;
+  }
+}
+
 async function loadAudioManifest() {
   try {
     const resp = await fetch('audio/manifest.json', { cache: 'no-cache' });
@@ -97,12 +125,29 @@ function stopAudio() {
     currentAudio = null;
   }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
+  stopMeter();
 }
 
 function play(vi) {
   stopAudio();
   const fname = audioManifest[vi];
   if (fname) {
+    const graphOk = ensureAudioGraph();
+    if (graphOk && sharedAudio) {
+      if (audioContext.state === 'suspended') audioContext.resume();
+      sharedAudio.src = 'audio/' + fname;
+      sharedAudio.playbackRate = currentRate;
+      sharedAudio.preservesPitch = true;
+      currentAudio = sharedAudio;
+      sharedAudio.play().then(() => {
+        startMeter();
+      }).catch(err => {
+        console.warn('MP3 재생 실패, TTS로 대체:', err);
+        speak(vi);
+      });
+      return;
+    }
+    // Web Audio 불가 시 일반 Audio 재생 (미터 없음)
     const audio = new Audio('audio/' + fname);
     audio.playbackRate = currentRate;
     audio.preservesPitch = true;
@@ -114,6 +159,84 @@ function play(vi) {
     return;
   }
   speak(vi);
+}
+
+// ========== 레벨 미터 (재생 중 실시간 신호 감지) ==========
+const SILENT_PEAK = 4;       // 0~128 중 이 이하면 "무음"
+const SILENT_WARN_MS = 600;  // 이 시간 이상 무음이면 경고 표시
+
+let meterRAF = null;
+let silentAccumMs = 0;
+let meterLastTick = 0;
+
+function startMeter() {
+  if (!analyserNode) return;
+  const meterEl = document.getElementById('level-meter');
+  const barEl = document.getElementById('level-bar');
+  const warnEl = document.getElementById('level-warning');
+  if (!meterEl) return;
+
+  meterEl.hidden = false;
+  meterEl.classList.add('active');
+  if (warnEl) warnEl.hidden = true;
+  silentAccumMs = 0;
+  meterLastTick = performance.now();
+
+  const tick = () => {
+    analyserNode.getByteTimeDomainData(analyserData);
+    let peak = 0;
+    for (let i = 0; i < analyserData.length; i++) {
+      const d = Math.abs(analyserData[i] - 128);
+      if (d > peak) peak = d;
+    }
+    const levelPct = Math.min(100, (peak / 64) * 100);
+    if (barEl) barEl.style.width = levelPct + '%';
+    if (barEl) barEl.classList.toggle('silent', peak < SILENT_PEAK);
+
+    const now = performance.now();
+    const dt = now - meterLastTick;
+    meterLastTick = now;
+    if (peak < SILENT_PEAK) {
+      silentAccumMs += dt;
+      if (warnEl && silentAccumMs >= SILENT_WARN_MS) warnEl.hidden = false;
+    } else {
+      silentAccumMs = 0;
+      if (warnEl) warnEl.hidden = true;
+    }
+
+    if (currentAudio && !currentAudio.paused && !currentAudio.ended) {
+      meterRAF = requestAnimationFrame(tick);
+    } else {
+      stopMeter();
+    }
+  };
+  meterRAF = requestAnimationFrame(tick);
+}
+
+function stopMeter() {
+  if (meterRAF) {
+    cancelAnimationFrame(meterRAF);
+    meterRAF = null;
+  }
+  const meterEl = document.getElementById('level-meter');
+  const warnEl = document.getElementById('level-warning');
+  const barEl = document.getElementById('level-bar');
+  if (meterEl) {
+    meterEl.classList.remove('active');
+    // 경고가 떠있으면 잠깐 유지했다가 숨기기
+    if (warnEl && !warnEl.hidden) {
+      setTimeout(() => {
+        if (!currentAudio || currentAudio.paused) {
+          meterEl.hidden = true;
+          warnEl.hidden = true;
+          if (barEl) barEl.style.width = '0%';
+        }
+      }, 2000);
+    } else {
+      meterEl.hidden = true;
+      if (barEl) barEl.style.width = '0%';
+    }
+  }
 }
 
 // ========== 렌더링 ==========
