@@ -1,0 +1,20 @@
+{
+  "name": "베트남 여행 회화",
+  "short_name": "베트남 회화",
+  "description": "한국어 → 베트남어 음성 회화집",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f7f8",
+  "theme_color": "#da251d",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#da251d"/>
+  <polygon fill="#ffff00" points="256,110 302,251 450,251 330,338 376,480 256,393 136,480 182,338 62,251 210,251"/>
+  <text x="256" y="438" text-anchor="middle" font-family="-apple-system,system-ui,sans-serif" font-size="64" font-weight="700" fill="#da251d">VN</text>
+</svg>

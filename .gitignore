@@ -1,0 +1,9 @@
+# API 키 — 절대 GitHub에 올리지 말 것
+.env
+
+# 시스템
+.DS_Store
+
+# 파이썬
+__pycache__/
+*.pyc
