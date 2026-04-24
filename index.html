@@ -24,7 +24,8 @@
           <button type="button" class="lang-btn" data-lang="ja" aria-pressed="false">🇯🇵</button>
         </div>
         <button id="gender-toggle-btn" type="button" class="gender-toggle-btn" data-gender="female" aria-label="음성 성별 전환">♀</button>
-        <button id="help-btn" class="help-btn" aria-label="도움말 열기" title="도움말">?</button>
+        <button id="settings-btn" class="icon-btn" aria-label="설정 열기" title="설정">⚙️</button>
+        <button id="help-btn" class="help-btn icon-btn" aria-label="도움말 열기" title="도움말">?</button>
       </div>
     </div>
     <input id="search" type="search" placeholder="🔍 검색 (한국어/현지어)" aria-label="검색" />
@@ -104,6 +105,33 @@
     </div>
   </div>
 
+  <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-modal="true" hidden>
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 id="settings-title">⚙️ 설정</h2>
+        <button class="modal-close" aria-label="닫기" data-close="1">✕</button>
+      </div>
+      <div class="modal-body">
+        <section>
+          <h3>🎚️ 재생 속도</h3>
+          <p>문장 재생 속도를 조절합니다. 0.7~0.8x가 따라 하기 좋아요.</p>
+          <div class="rate-row">
+            <input id="rate-slider" type="range" min="0.5" max="1.2" step="0.05" value="0.9" aria-label="재생 속도" />
+            <span id="rate-label">0.9x</span>
+          </div>
+        </section>
+
+        <section>
+          <h3>📥 오프라인 음성</h3>
+          <p>비행기 모드나 데이터 로밍이 없는 곳에서도 동작하도록, WiFi 상태에서 미리 받아두세요.
+            한 번만 누르면 모든 언어/성별 조합이 캐시됩니다 (약 5MB).</p>
+          <button id="preload-btn" class="preload-btn" type="button">📥 모든 음성 다운로드</button>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <div id="help-modal" class="modal" role="dialog" aria-labelledby="help-title" aria-modal="true" hidden>
     <div class="modal-backdrop" data-close="1"></div>
     <div class="modal-panel">
@@ -140,9 +168,7 @@
                 <li>Android Chrome: 메뉴(⋮) → 홈 화면에 추가</li>
               </ul>
             </li>
-            <li><strong>오프라인용 음성 미리 받기</strong> (아래 버튼, WiFi에서 한 번만)
-              <button id="preload-btn" class="preload-btn" type="button">📥 오프라인용 전체 음성 다운로드</button>
-            </li>
+            <li><strong>오프라인용 음성 미리 받기</strong> — 상단 <strong>⚙️ 설정</strong> → "모든 음성 다운로드"</li>
           </ol>
           <p>입력·듣기 기능은 인터넷이 필요합니다. 오프라인에서는 저장된 회화만 동작합니다.</p>
         </section>

@@ -75,7 +75,11 @@ if (typeof speechSynthesis !== 'undefined') {
   speechSynthesis.onvoiceschanged = refreshVoices;
 }
 
-const currentRate = 0.9;  // 고정 재생 속도
+const RATE_STORAGE_KEY = 'vn-phrasebook-rate';
+let currentRate = (() => {
+  const v = parseFloat(localStorage.getItem(RATE_STORAGE_KEY));
+  return (v >= 0.5 && v <= 1.2) ? v : 0.9;
+})();
 
 function speak(text) {
   if (!('speechSynthesis' in window)) {
@@ -420,39 +424,60 @@ function renderKeySetup(container, onSaved) {
   return true;
 }
 
-// ========== 오프라인 프리로드 (모든 MP3 미리 캐시) ==========
-async function preloadAllAudio(progressCb) {
-  const files = [...new Set(Object.values(audioManifest))];
-  if (files.length === 0) return { total: 0, ok: 0 };
-  let ok = 0;
-  for (let i = 0; i < files.length; i++) {
+// ========== 오프라인 프리로드 (모든 언어×성별 조합 미리 캐시) ==========
+async function collectAllAudioTargets() {
+  const combos = [];
+  for (const lang of Object.keys(LANG_CONFIG)) {
+    for (const gender of ['female', 'male']) {
+      combos.push({ lang, gender });
+    }
+  }
+  const targets = [];
+  for (const c of combos) {
     try {
-      const resp = await fetch(`audio/${currentLang}/${currentGender}/${files[i]}`, { cache: 'reload' });
+      const resp = await fetch(`audio/${c.lang}/${c.gender}/manifest.json`, { cache: 'reload' });
+      if (!resp.ok) continue;
+      const m = await resp.json();
+      for (const fname of new Set(Object.values(m))) {
+        targets.push(`audio/${c.lang}/${c.gender}/${fname}`);
+      }
+    } catch (e) { /* skip */ }
+  }
+  return targets;
+}
+
+async function preloadAllAudio(progressCb) {
+  const targets = await collectAllAudioTargets();
+  if (targets.length === 0) return { total: 0, ok: 0 };
+  let ok = 0;
+  for (let i = 0; i < targets.length; i++) {
+    try {
+      const resp = await fetch(targets[i], { cache: 'reload' });
       if (resp.ok) ok++;
     } catch (e) { /* ignore */ }
-    if (progressCb) progressCb(i + 1, files.length);
+    if (progressCb) progressCb(i + 1, targets.length);
   }
-  return { total: files.length, ok };
+  return { total: targets.length, ok };
 }
 
 function setupPreloadButton() {
   const btn = document.getElementById('preload-btn');
   if (!btn) return;
+  const originalText = '📥 모든 음성 다운로드';
   btn.addEventListener('click', async () => {
-    const files = [...new Set(Object.values(audioManifest))];
-    if (files.length === 0) {
-      btn.textContent = '⚠️ 매니페스트 없음 — 먼저 생성 스크립트 실행';
-      return;
-    }
     btn.disabled = true;
-    btn.textContent = `다운로드 중… 0/${files.length}`;
+    btn.textContent = '준비 중…';
     const result = await preloadAllAudio((done, total) => {
       btn.textContent = `다운로드 중… ${done}/${total}`;
     });
-    btn.textContent = `✅ 완료 — ${result.ok}/${result.total} 파일 캐시됨`;
+    if (result.total === 0) {
+      btn.textContent = '⚠️ 매니페스트를 찾을 수 없습니다';
+    } else {
+      btn.textContent = `✅ 완료 — ${result.ok}/${result.total} 파일 캐시`;
+    }
     setTimeout(() => {
       btn.disabled = false;
-      btn.textContent = '📥 오프라인용 전체 음성 다운로드';
+      btn.textContent = originalText;
     }, 4000);
   });
 }
@@ -704,6 +729,41 @@ function setupGenderToggle() {
   applyGenderUI();
 }
 
+// ========== 설정 모달 ==========
+function setupSettingsModal() {
+  const btn = document.getElementById('settings-btn');
+  const modal = document.getElementById('settings-modal');
+  if (!btn || !modal) return;
+
+  const open = () => {
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  };
+  const close = () => {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+  };
+
+  btn.addEventListener('click', open);
+  modal.addEventListener('click', e => { if (e.target.dataset.close) close(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+}
+
+function setupRateSlider() {
+  const slider = document.getElementById('rate-slider');
+  const label = document.getElementById('rate-label');
+  if (!slider || !label) return;
+  slider.value = String(currentRate);
+  label.textContent = currentRate.toFixed(2).replace(/0$/, '') + 'x';
+  slider.addEventListener('input', e => {
+    currentRate = parseFloat(e.target.value);
+    label.textContent = currentRate.toFixed(2).replace(/0$/, '') + 'x';
+    localStorage.setItem(RATE_STORAGE_KEY, String(currentRate));
+  });
+}
+
 // ========== 도움말 모달 ==========
 function setupHelp() {
   const btn = document.getElementById('help-btn');
@@ -746,6 +806,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVoicePicker();
   setupInputModal();
   setupListenModal();
+  setupSettingsModal();
+  setupRateSlider();
   setupHelp();
   setupPreloadButton();
   registerSW();

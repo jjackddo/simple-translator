@@ -180,7 +180,8 @@ h1 {
   border-color: #B9CBF0;
 }
 
-/* Help button — soft circle */
+/* Round icon buttons (help, settings) — soft circle */
+.icon-btn,
 .help-btn {
   flex: 0 0 auto;
   width: 36px;
@@ -200,6 +201,7 @@ h1 {
   box-shadow: var(--shadow-card);
   transition: transform 0.1s ease, background 0.15s ease;
 }
+.icon-btn:active,
 .help-btn:active {
   transform: scale(0.92);
   background: var(--surface-2);
@@ -922,6 +924,28 @@ footer {
   padding: 1px 6px;
   border-radius: 4px;
   color: var(--ink);
+}
+
+/* Settings: rate slider row */
+.rate-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0 4px;
+}
+.rate-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--coral);
+  height: 32px;
+}
+#rate-label {
+  min-width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--coral);
 }
 
 .preload-btn {
