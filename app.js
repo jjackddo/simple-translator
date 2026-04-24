@@ -1,7 +1,10 @@
 // ========== 언어 설정 ==========
+// code: 브라우저 SpeechSynthesis/SpeechRecognition 언어 태그
+// translateCode: Google Cloud Translation API에 넣을 언어 코드
 const LANG_CONFIG = {
-  vi: { code: 'vi-VN', label: '🇻🇳 베트남어', title: '베트남 여행 회화', voiceQualityNames: /linh|hoaimy|namminh|lien/i },
-  ja: { code: 'ja-JP', label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
+  vi: { code: 'vi-VN', translateCode: 'vi',    label: '🇻🇳 베트남어', title: '베트남 여행 회화', voiceQualityNames: /linh|hoaimy|namminh|lien/i },
+  ja: { code: 'ja-JP', translateCode: 'ja',    label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
+  zh: { code: 'zh-CN', translateCode: 'zh-CN', label: '🇨🇳 중국어',   title: '중국 여행 회화',   voiceQualityNames: /xiaoxiao|xiaoyi|yunxi|yunjian/i },
 };
 const LANG_STORAGE_KEY = 'vn-phrasebook-lang';
 const GENDER_STORAGE_KEY = 'vn-phrasebook-gender';
@@ -348,7 +351,7 @@ function setupVoicePicker() {
       selectedVoice = picked;
       localStorage.setItem(VOICE_PREF_KEY_PREFIX + currentLang, picked.name);
       // 미리듣기 — TTS 테스트이므로 직접 speak 사용
-      speak(currentLang === 'ja' ? 'こんにちは' : 'Xin chào');
+      speak({ vi: 'Xin chào', ja: 'こんにちは', zh: '你好' }[currentLang] || 'hello');
     }
   });
 }
@@ -527,7 +530,7 @@ function setupInputModal() {
     viBox.textContent = '';
     translateBtn.disabled = true;
     try {
-      const translated = await translate(text, 'ko', currentLang);
+      const translated = await translate(text, 'ko', LANG_CONFIG[currentLang].translateCode);
       viBox.textContent = translated;
       statusEl.textContent = '';
       play(translated);
@@ -628,7 +631,7 @@ function setupListenModal() {
       if (final) {
         statusEl.textContent = '번역 중...';
         try {
-          const ko = await translate(final, currentLang, 'ko');
+          const ko = await translate(final, LANG_CONFIG[currentLang].translateCode, 'ko');
           koBox.textContent = ko;
           statusEl.textContent = '';
           speakKorean(ko);

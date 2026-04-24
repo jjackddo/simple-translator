@@ -53,6 +53,14 @@ LANG_CONFIG = {
             'male':   'ja-JP-Neural2-C',
         },
     },
+    'zh': {
+        # Google TTS는 만다린을 cmn-CN으로 지정 (Neural2 없음, Wavenet 최상급)
+        'language_code': 'cmn-CN',
+        'voices': {
+            'female': 'cmn-CN-Wavenet-A',
+            'male':   'cmn-CN-Wavenet-B',
+        },
+    },
 }
 
 
