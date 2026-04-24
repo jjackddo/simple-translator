@@ -108,9 +108,8 @@ h1 {
   color: var(--ink);
 }
 
-/* Segmented toggles — language & gender share same shell */
-.lang-toggle,
-.gender-toggle {
+/* Language toggle — segmented pill (2 flags) */
+.lang-toggle {
   display: inline-flex;
   background: var(--surface);
   border: 1px solid var(--hair-strong);
@@ -121,8 +120,7 @@ h1 {
   position: relative;
 }
 
-.lang-btn,
-.gender-btn {
+.lang-btn {
   appearance: none;
   border: none;
   background: transparent;
@@ -141,26 +139,46 @@ h1 {
   align-items: center;
   justify-content: center;
   font-family: inherit;
+  filter: grayscale(0.6);
 }
-.lang-btn { filter: grayscale(0.6); }
-.lang-btn.active { filter: grayscale(0); }
-
-.lang-btn:active,
-.gender-btn:active { transform: scale(0.92); }
-
-.lang-btn.active,
-.gender-btn.active {
+.lang-btn:active { transform: scale(0.92); }
+.lang-btn.active {
   background: var(--ink);
   color: #fff;
-  opacity: 1;
+  filter: grayscale(0);
   box-shadow: 0 2px 6px rgba(42, 26, 20, 0.25);
 }
 
-/* Subtle tint to help scan-ability */
-.gender-btn[data-gender="female"] { color: #B85577; }
-.gender-btn[data-gender="male"]   { color: #3B6EC9; }
-.gender-btn.active[data-gender="female"] { background: #B85577; color: #fff; }
-.gender-btn.active[data-gender="male"]   { background: #3B6EC9; color: #fff; }
+/* Gender toggle — single round pill, tap to flip */
+.gender-toggle-btn {
+  appearance: none;
+  border: 1px solid var(--hair-strong);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: var(--shadow-card);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+  font-family: inherit;
+}
+.gender-toggle-btn:active { transform: scale(0.92); }
+.gender-toggle-btn[data-gender="female"] {
+  background: #FFE0EA;
+  color: #B8436A;
+  border-color: #F2BCC9;
+}
+.gender-toggle-btn[data-gender="male"] {
+  background: #DDE8FF;
+  color: #2E5FB8;
+  border-color: #B9CBF0;
+}
 
 /* Help button — soft circle */
 .help-btn {
@@ -535,6 +553,7 @@ footer {
   z-index: 20;
 }
 
+/* 입력/듣기 공통 — 테마에 관계없이 콘트라스트 확실하게 */
 .action-btn {
   flex: 1;
   display: flex;
@@ -545,25 +564,32 @@ footer {
   padding: 12px;
   border: none;
   border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   min-height: 56px;
   font-family: inherit;
   letter-spacing: -0.2px;
-  box-shadow: 0 4px 14px rgba(42, 26, 20, 0.18);
   transition: transform 0.1s ease, background 0.15s ease;
 }
 .action-btn:active {
-  background: #000;
   transform: scale(0.98);
 }
 
-/* Differentiate the two actions */
+/* 입력 — 브랜드에 맞는 진한 espresso 톤 (라이트/다크 모두 어두워서 흰 글씨가 또렷) */
+#input-btn {
+  background: #3A2A24;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(42, 26, 20, 0.28);
+}
+#input-btn:active {
+  background: #241814;
+}
+
+/* 듣기 — 코랄 계열로 확실히 구분 */
 #listen-btn {
   background: var(--coral);
+  color: #fff;
   box-shadow: 0 4px 14px rgba(232, 98, 61, 0.35);
 }
 #listen-btn:active {
@@ -972,11 +998,17 @@ footer {
     color: #fff;
   }
 
-  /* 다크모드 — 성별 토글 톤 다운 */
-  .gender-btn[data-gender="female"] { color: #F093B0; }
-  .gender-btn[data-gender="male"]   { color: #8AB0FF; }
-  .gender-btn.active[data-gender="female"] { background: #B85577; color: #fff; }
-  .gender-btn.active[data-gender="male"]   { background: #3B6EC9; color: #fff; }
+  /* 다크모드 — 성별 토글 톤 조정 */
+  .gender-toggle-btn[data-gender="female"] {
+    background: rgba(184, 67, 106, 0.18);
+    color: #F2A5BF;
+    border-color: rgba(184, 67, 106, 0.4);
+  }
+  .gender-toggle-btn[data-gender="male"] {
+    background: rgba(46, 95, 184, 0.18);
+    color: #9BB9EF;
+    border-color: rgba(46, 95, 184, 0.4);
+  }
 
   /* Phrase playing glow slightly stronger */
   .phrase.playing {

@@ -673,12 +673,16 @@ function setupLangToggle() {
   applyLangUI();
 }
 
-// ========== 성별 토글 ==========
+// ========== 성별 토글 (단일 버튼, 탭하여 전환) ==========
 function applyGenderUI() {
-  document.querySelectorAll('[data-gender]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.gender === currentGender);
-    btn.setAttribute('aria-pressed', btn.dataset.gender === currentGender ? 'true' : 'false');
-  });
+  const btn = document.getElementById('gender-toggle-btn');
+  if (!btn) return;
+  btn.dataset.gender = currentGender;
+  btn.textContent = currentGender === 'female' ? '♀' : '♂';
+  btn.setAttribute(
+    'aria-label',
+    currentGender === 'female' ? '여성 음성 (탭하여 남성으로)' : '남성 음성 (탭하여 여성으로)'
+  );
 }
 
 async function switchGender(newGender) {
@@ -692,8 +696,10 @@ async function switchGender(newGender) {
 }
 
 function setupGenderToggle() {
-  document.querySelectorAll('[data-gender]').forEach(btn => {
-    btn.addEventListener('click', () => switchGender(btn.dataset.gender));
+  const btn = document.getElementById('gender-toggle-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    switchGender(currentGender === 'female' ? 'male' : 'female');
   });
   applyGenderUI();
 }
