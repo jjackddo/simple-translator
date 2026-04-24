@@ -98,36 +98,41 @@ function speak(text) {
   speechSynthesis.speak(u);
 }
 
-// ========== MP3 오디오 (고품질, 있으면 우선 사용) ==========
-let audioManifest = {};   // { "Xin chào": "abc123.mp3", ... }
-let currentAudio = null;
+// ========== MP3 오디오 (Web Audio BufferSource 기반) ==========
+// HTMLAudioElement를 쓰지 않으므로:
+//  1) iOS의 "미디어 재생 위젯"(잠금화면/제어센터 Now Playing)이 뜨지 않음
+//  2) MediaElementSource + playbackRate에서 발생하던 iOS 지지직 아티팩트 해소
+// 레벨 미터는 AudioContext의 시계(currentTime)를 이용한 진행 바.
+let audioManifest = {};
+let audioCtx = null;
+let currentSource = null;
+let sourceStartedAt = 0;
+let sourceDuration = 0;
+const BUFFER_CACHE_MAX = 25;     // 최근 재생한 버퍼만 유지 (메모리 절약)
+const bufferCache = new Map();   // path → decoded AudioBuffer (LRU)
 
-// Web Audio 그래프 (레벨 미터용). 최초 재생 직전에 사용자 제스처로 초기화.
-let audioContext = null;
-let analyserNode = null;
-let sharedAudio = null;
-let analyserData = null;
+function cacheGet(path) {
+  if (!bufferCache.has(path)) return null;
+  const v = bufferCache.get(path);
+  bufferCache.delete(path);
+  bufferCache.set(path, v);      // LRU bump
+  return v;
+}
 
-function ensureAudioGraph() {
-  if (audioContext) return true;
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return false;
-  try {
-    audioContext = new Ctx();
-    sharedAudio = new Audio();
-    sharedAudio.preload = 'auto';
-    const src = audioContext.createMediaElementSource(sharedAudio);
-    analyserNode = audioContext.createAnalyser();
-    analyserNode.fftSize = 256;
-    analyserData = new Uint8Array(analyserNode.frequencyBinCount);
-    src.connect(analyserNode);
-    analyserNode.connect(audioContext.destination);
-    return true;
-  } catch (e) {
-    console.warn('Web Audio 초기화 실패:', e);
-    audioContext = null;
-    return false;
+function cachePut(path, buffer) {
+  if (bufferCache.has(path)) bufferCache.delete(path);
+  bufferCache.set(path, buffer);
+  while (bufferCache.size > BUFFER_CACHE_MAX) {
+    bufferCache.delete(bufferCache.keys().next().value);
   }
+}
+
+function getAudioContext() {
+  if (audioCtx) return audioCtx;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  audioCtx = new Ctx();
+  return audioCtx;
 }
 
 async function loadAudioManifest() {
@@ -140,97 +145,99 @@ async function loadAudioManifest() {
   }
 }
 
+async function decodeBuffer(path) {
+  const ctx = getAudioContext();
+  if (!ctx) throw new Error('Web Audio API unsupported');
+  const cached = cacheGet(path);
+  if (cached) return cached;
+  const resp = await fetch(path);
+  if (!resp.ok) throw new Error(`fetch ${resp.status}`);
+  const arr = await resp.arrayBuffer();
+  // Safari 구버전 호환: Promise 또는 콜백 형태 모두 지원
+  const buffer = await new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(arr, resolve, reject);
+    if (p && typeof p.then === 'function') p.then(resolve, reject);
+  });
+  cachePut(path, buffer);
+  return buffer;
+}
+
 function stopAudio() {
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
-    currentAudio = null;
+  if (currentSource) {
+    try { currentSource.onended = null; } catch {}
+    try { currentSource.stop(0); } catch {}
+    try { currentSource.disconnect(); } catch {}
+    currentSource = null;
   }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
   stopMeter();
 }
 
-function play(text) {
+async function play(text) {
   stopAudio();
   const fname = audioManifest[text];
-  const audioPath = fname ? `audio/${currentLang}/${currentGender}/${fname}` : null;
-  if (audioPath) {
-    const graphOk = ensureAudioGraph();
-    if (graphOk && sharedAudio) {
-      if (audioContext.state === 'suspended') audioContext.resume();
-      sharedAudio.src = audioPath;
-      sharedAudio.playbackRate = currentRate;
-      sharedAudio.preservesPitch = true;
-      currentAudio = sharedAudio;
-      sharedAudio.play().then(() => {
-        startMeter();
-      }).catch(err => {
-        console.warn('MP3 재생 실패, TTS로 대체:', err);
-        speak(text);
-      });
-      return;
-    }
-    const audio = new Audio(audioPath);
-    audio.playbackRate = currentRate;
-    audio.preservesPitch = true;
-    currentAudio = audio;
-    audio.play().catch(err => {
-      console.warn('MP3 재생 실패, TTS로 대체:', err);
-      speak(text);
-    });
+  if (!fname) { speak(text); return; }
+  const audioPath = `audio/${currentLang}/${currentGender}/${fname}`;
+
+  const ctx = getAudioContext();
+  if (!ctx) { speak(text); return; }
+  // 사용자 제스처 내에서 호출되므로 resume() 가능
+  if (ctx.state === 'suspended') {
+    try { await ctx.resume(); } catch {}
+  }
+
+  let buffer;
+  try {
+    buffer = await decodeBuffer(audioPath);
+  } catch (err) {
+    console.warn('MP3 디코드 실패, TTS로 대체:', err);
+    speak(text);
     return;
   }
-  speak(text);
-}
 
-// ========== 레벨 미터 (재생 중 실시간 신호 감지) ==========
-const SILENT_PEAK = 4;       // 0~128 중 이 이하면 "무음"
-const SILENT_WARN_MS = 600;  // 이 시간 이상 무음이면 경고 표시
-
-let meterRAF = null;
-let silentAccumMs = 0;
-let meterLastTick = 0;
-
-function startMeter() {
-  if (!analyserNode) return;
-  const meterEl = document.getElementById('level-meter');
-  const barEl = document.getElementById('level-bar');
-  const warnEl = document.getElementById('level-warning');
-  if (!meterEl) return;
-
-  meterEl.hidden = false;
-  meterEl.classList.add('active');
-  if (warnEl) warnEl.hidden = true;
-  silentAccumMs = 0;
-  meterLastTick = performance.now();
-
-  const tick = () => {
-    analyserNode.getByteTimeDomainData(analyserData);
-    let peak = 0;
-    for (let i = 0; i < analyserData.length; i++) {
-      const d = Math.abs(analyserData[i] - 128);
-      if (d > peak) peak = d;
-    }
-    const levelPct = Math.min(100, (peak / 64) * 100);
-    if (barEl) barEl.style.width = levelPct + '%';
-    if (barEl) barEl.classList.toggle('silent', peak < SILENT_PEAK);
-
-    const now = performance.now();
-    const dt = now - meterLastTick;
-    meterLastTick = now;
-    if (peak < SILENT_PEAK) {
-      silentAccumMs += dt;
-      if (warnEl && silentAccumMs >= SILENT_WARN_MS) warnEl.hidden = false;
-    } else {
-      silentAccumMs = 0;
-      if (warnEl) warnEl.hidden = true;
-    }
-
-    if (currentAudio && !currentAudio.paused && !currentAudio.ended) {
-      meterRAF = requestAnimationFrame(tick);
-    } else {
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.playbackRate.value = currentRate;
+  source.connect(ctx.destination);
+  source.onended = () => {
+    if (currentSource === source) {
+      currentSource = null;
       stopMeter();
     }
+  };
+
+  currentSource = source;
+  sourceStartedAt = ctx.currentTime;
+  sourceDuration = buffer.duration / currentRate;
+  try {
+    source.start(0);
+  } catch (err) {
+    console.warn('MP3 재생 실패:', err);
+    speak(text);
+    return;
+  }
+  startMeter();
+}
+
+// ========== 레벨 미터 (시간 기반 진행 바) ==========
+let meterRAF = null;
+
+function startMeter() {
+  const meterEl = document.getElementById('level-meter');
+  const barEl = document.getElementById('level-bar');
+  if (!meterEl) return;
+  meterEl.hidden = false;
+  meterEl.classList.add('active');
+
+  const tick = () => {
+    if (!currentSource || !audioCtx) { stopMeter(); return; }
+    const elapsed = audioCtx.currentTime - sourceStartedAt;
+    const pct = sourceDuration > 0
+      ? Math.min(100, (elapsed / sourceDuration) * 100)
+      : 0;
+    if (barEl) barEl.style.width = pct + '%';
+    if (elapsed >= sourceDuration) { stopMeter(); return; }
+    meterRAF = requestAnimationFrame(tick);
   };
   meterRAF = requestAnimationFrame(tick);
 }
@@ -241,23 +248,15 @@ function stopMeter() {
     meterRAF = null;
   }
   const meterEl = document.getElementById('level-meter');
-  const warnEl = document.getElementById('level-warning');
   const barEl = document.getElementById('level-bar');
   if (meterEl) {
     meterEl.classList.remove('active');
-    // 경고가 떠있으면 잠깐 유지했다가 숨기기
-    if (warnEl && !warnEl.hidden) {
-      setTimeout(() => {
-        if (!currentAudio || currentAudio.paused) {
-          meterEl.hidden = true;
-          warnEl.hidden = true;
-          if (barEl) barEl.style.width = '0%';
-        }
-      }, 2000);
-    } else {
-      meterEl.hidden = true;
-      if (barEl) barEl.style.width = '0%';
-    }
+    setTimeout(() => {
+      if (!currentSource) {
+        meterEl.hidden = true;
+        if (barEl) barEl.style.width = '0%';
+      }
+    }, 250);
   }
 }
 
