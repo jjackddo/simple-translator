@@ -1,5 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#da251d"/>
-  <polygon fill="#ffff00" points="256,110 302,251 450,251 330,338 376,480 256,393 136,480 182,338 62,251 210,251"/>
-  <text x="256" y="438" text-anchor="middle" font-family="-apple-system,system-ui,sans-serif" font-size="64" font-weight="700" fill="#da251d">VN</text>
+  <defs>
+    <linearGradient id="e-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF6EE"></stop>
+      <stop offset="0.6" stop-color="#FFE5D4"></stop>
+      <stop offset="1" stop-color="#FFD2B0"></stop>
+    </linearGradient>
+    <linearGradient id="e-blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A6C4E8"></stop>
+      <stop offset="1" stop-color="#7DA7E0"></stop>
+    </linearGradient>
+    <linearGradient id="e-orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F9C66B"></stop>
+      <stop offset="1" stop-color="#E8623D"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#e-bg)"></rect>
+
+  
+  <g>
+    <path d="M 106 90&#xA;             h 160&#xA;             a 44 44 0 0 1 44 44&#xA;             v 114&#xA;             a 44 44 0 0 1 -44 44&#xA;             h -64&#xA;             c -8 2 -15 7 -18 15&#xA;             l -12 28&#xA;             c -3 6 -11 6 -14 0&#xA;             l -18 -36&#xA;             c -2 -5 -6 -9 -12 -9&#xA;             h -22&#xA;             a 44 44 0 0 1 -44 -44&#xA;             v -112&#xA;             a 44 44 0 0 1 44 -44 z" fill="url(#e-blue)"></path>
+
+    
+    <g transform="translate(166 154) rotate(40) scale(0.72)" fill="#FFFFFF">
+      <path d="M 0 -68&#xA;               C 9 -68 16 -57 16 -42&#xA;               L 16 -8&#xA;               L 76 26&#xA;               C 80 28 82 32 82 36&#xA;               L 82 42&#xA;               C 82 46 78 49 74 47&#xA;               L 16 33&#xA;               L 16 60&#xA;               L 32 71&#xA;               C 34 72 35 74 35 76&#xA;               L 35 80&#xA;               C 35 83 32 84 30 83&#xA;               L 2 76&#xA;               L -2 76&#xA;               L -30 83&#xA;               C -32 84 -35 83 -35 80&#xA;               L -35 76&#xA;               C -35 74 -34 72 -32 71&#xA;               L -16 60&#xA;               L -16 33&#xA;               L -74 47&#xA;               C -78 49 -82 46 -82 42&#xA;               L -82 36&#xA;               C -82 32 -80 28 -76 26&#xA;               L -16 -8&#xA;               L -16 -42&#xA;               C -16 -57 -9 -68 0 -68 Z"></path>
+    </g>
+
+    
+    <text x="208" y="232" text-anchor="start" font-family="-apple-system,system-ui,&#39;SF Pro Rounded&#39;,sans-serif" font-size="92" font-weight="800" fill="#FFFFFF">A</text>
+  </g>
+
+  
+  <g>
+    <path d="M 246 222&#xA;             h 160&#xA;             a 44 44 0 0 1 44 44&#xA;             v 112&#xA;             a 44 44 0 0 1 -44 44&#xA;             h -22&#xA;             c -6 0 -10 4 -12 9&#xA;             l -18 36&#xA;             c -3 6 -11 6 -14 0&#xA;             l -12 -28&#xA;             c -3 -8 -10 -13 -18 -15&#xA;             h -64&#xA;             a 44 44 0 0 1 -44 -44&#xA;             v -114&#xA;             a 44 44 0 0 1 44 -44 z" fill="url(#e-orange)"></path>
+
+    <g fill="#FFFFFF" transform="translate(296 322)">
+      <path d="M -32 0&#xA;               C -32 -14 -22 -24 -8 -24&#xA;               L 10 -24&#xA;               L 10 -36&#xA;               C 10 -40 14 -42 17 -39&#xA;               L 44 -14&#xA;               C 47 -11 47 -7 44 -4&#xA;               L 17 21&#xA;               C 14 24 10 22 10 18&#xA;               L 10 7&#xA;               L -8 7&#xA;               C -13 7 -16 10 -16 14&#xA;               L -16 24&#xA;               C -16 27 -19 29 -22 27&#xA;               L -33 18&#xA;               C -35 16 -35 14 -33 12 Z"></path>
+    </g>
+
+    <text x="356" y="354" text-anchor="start" font-family="&#39;Apple SD Gothic Neo&#39;,&#39;Noto Sans KR&#39;,sans-serif" font-size="92" font-weight="800" fill="#FFFFFF">한</text>
+  </g>
 </svg>
