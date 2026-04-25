@@ -897,12 +897,17 @@ function setupCurrencyModal() {
   });
   inputEl.addEventListener('input', compute);
   quickBtns.forEach(b => {
+    // 버튼 클릭 시 input의 포커스를 빼앗지 않도록 mousedown 기본동작 차단
+    // → 모바일 키보드가 닫히지 않아 UI가 흔들리지 않음
+    b.addEventListener('mousedown', e => e.preventDefault());
     b.addEventListener('click', () => {
       const current = parseAmount(inputEl.value);
       const base = isFinite(current) && current > 0 ? current : 0;
       const add = parseFloat(b.dataset.amount);
       inputEl.value = formatAmount(base + add);
       compute();
+      // iOS 안전장치: 혹시 포커스가 빠지면 다시 맞춤
+      if (document.activeElement !== inputEl) inputEl.focus();
     });
   });
 }
