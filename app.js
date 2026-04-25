@@ -5,6 +5,7 @@ const LANG_CONFIG = {
   vi: { code: 'vi-VN', translateCode: 'vi',    label: '🇻🇳 베트남어', title: '베트남 여행 회화', voiceQualityNames: /linh|hoaimy|namminh|lien/i },
   ja: { code: 'ja-JP', translateCode: 'ja',    label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
   zh: { code: 'zh-CN', translateCode: 'zh-CN', label: '🇨🇳 중국어',   title: '중국 여행 회화',   voiceQualityNames: /xiaoxiao|xiaoyi|yunxi|yunjian/i },
+  en: { code: 'en-US', translateCode: 'en',    label: '🇺🇸 영어',     title: '영어 여행 회화',   voiceQualityNames: /samantha|alex|fred|daniel|karen|moira/i },
 };
 const LANG_STORAGE_KEY = 'vn-phrasebook-lang';
 const GENDER_STORAGE_KEY = 'vn-phrasebook-gender';
@@ -299,7 +300,7 @@ function setupVoicePicker() {
       selectedVoice = picked;
       localStorage.setItem(VOICE_PREF_KEY_PREFIX + currentLang, picked.name);
       // 미리듣기 — TTS 테스트이므로 직접 speak 사용
-      speak({ vi: 'Xin chào', ja: 'こんにちは', zh: '你好' }[currentLang] || 'hello');
+      speak({ vi: 'Xin chào', ja: 'こんにちは', zh: '你好', en: 'Hello' }[currentLang] || 'hello');
     }
   });
 }
@@ -720,6 +721,7 @@ const CURRENCY_BY_LANG = {
   vi: { code: 'VND', name: '베트남 동',  hint: '예: 100,000' },
   ja: { code: 'JPY', name: '일본 엔',    hint: '예: 1,000' },
   zh: { code: 'CNY', name: '중국 위안',  hint: '예: 100' },
+  en: { code: 'USD', name: '미국 달러',  hint: '예: 10' },
 };
 const RATES_STORAGE_KEY = 'vn-phrasebook-rates';
 const RATES_TTL_MS = 6 * 60 * 60 * 1000;

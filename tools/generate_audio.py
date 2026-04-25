@@ -61,6 +61,13 @@ LANG_CONFIG = {
             'male':   'cmn-CN-Wavenet-B',
         },
     },
+    'en': {
+        'language_code': 'en-US',
+        'voices': {
+            'female': 'en-US-Neural2-C',
+            'male':   'en-US-Neural2-D',
+        },
+    },
 }
 
 
