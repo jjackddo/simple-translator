@@ -766,6 +766,144 @@ function setupRateSlider() {
   });
 }
 
+// ========== 환율 계산기 ==========
+const CURRENCY_BY_LANG = {
+  vi: { code: 'VND', name: '베트남 동',  hint: '예: 100,000' },
+  ja: { code: 'JPY', name: '일본 엔',    hint: '예: 1,000' },
+  zh: { code: 'CNY', name: '중국 위안',  hint: '예: 100' },
+};
+const RATES_STORAGE_KEY = 'vn-phrasebook-rates';
+const RATES_TTL_MS = 6 * 60 * 60 * 1000;
+const RATES_URL = 'https://open.er-api.com/v6/latest/USD';
+
+let cachedRates = null;
+
+function loadCachedRates() {
+  try {
+    cachedRates = JSON.parse(localStorage.getItem(RATES_STORAGE_KEY) || 'null');
+  } catch { cachedRates = null; }
+}
+
+async function getRates() {
+  if (!cachedRates) loadCachedRates();
+  const fresh = cachedRates && (Date.now() - cachedRates.fetchedAt < RATES_TTL_MS);
+  if (fresh) return cachedRates;
+
+  try {
+    const resp = await fetch(RATES_URL, { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.result !== 'success') throw new Error(data.error_type || 'API error');
+    const out = { rates: data.rates, fetchedAt: Date.now() };
+    cachedRates = out;
+    localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(out));
+    return out;
+  } catch (err) {
+    if (cachedRates) return { ...cachedRates, stale: true };
+    throw err;
+  }
+}
+
+function convertToKRW(amount, fromCurrency, rates) {
+  const fromRate = rates[fromCurrency];
+  const krwRate = rates['KRW'];
+  if (!fromRate || !krwRate) return null;
+  return amount / fromRate * krwRate;
+}
+
+function formatKRW(n) {
+  return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' 원';
+}
+
+function parseAmount(s) {
+  if (!s) return NaN;
+  const cleaned = s.replace(/,/g, '').replace(/\s/g, '');
+  return parseFloat(cleaned);
+}
+
+function formatAmount(n) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n);
+}
+
+function ageLabel(ms) {
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
+}
+
+function setupCurrencyModal() {
+  const btn = document.getElementById('currency-btn');
+  const modal = document.getElementById('currency-modal');
+  if (!btn || !modal) return;
+
+  const inputEl = document.getElementById('currency-input');
+  const unitEl = document.getElementById('currency-input-unit');
+  const labelEl = document.getElementById('currency-input-label');
+  const resultEl = document.getElementById('currency-result');
+  const statusEl = document.getElementById('currency-status');
+  const quickBtns = modal.querySelectorAll('.quick-amount');
+
+  let ratesData = null;
+
+  const compute = () => {
+    const cfg = CURRENCY_BY_LANG[currentLang];
+    const v = parseAmount(inputEl.value);
+    if (!isFinite(v) || v <= 0 || !ratesData) {
+      resultEl.textContent = '—';
+      return;
+    }
+    const krw = convertToKRW(v, cfg.code, ratesData.rates);
+    resultEl.textContent = (krw == null) ? '환율 없음' : `약 ${formatKRW(krw)}`;
+  };
+
+  const refreshUnit = () => {
+    const cfg = CURRENCY_BY_LANG[currentLang];
+    unitEl.textContent = cfg.code;
+    labelEl.textContent = `현지 금액 입력 (${cfg.code} · ${cfg.name})`;
+    inputEl.placeholder = cfg.hint;
+  };
+
+  const open = async () => {
+    refreshUnit();
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    inputEl.value = '';
+    resultEl.textContent = '—';
+    statusEl.textContent = '환율 불러오는 중…';
+    setTimeout(() => inputEl.focus(), 80);
+    try {
+      ratesData = await getRates();
+      const age = Date.now() - ratesData.fetchedAt;
+      statusEl.textContent = ratesData.stale
+        ? `⚠️ 오프라인 — 캐시된 환율(${ageLabel(age)}) 사용 중`
+        : `✓ 환율 업데이트: ${ageLabel(age)} (USD 기준 변환)`;
+      compute();
+    } catch (e) {
+      statusEl.textContent = '❌ 환율을 가져오지 못했습니다 — 인터넷 연결을 확인하세요';
+    }
+  };
+  const close = () => {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+  };
+
+  btn.addEventListener('click', open);
+  modal.addEventListener('click', e => { if (e.target.dataset.close) close(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+  inputEl.addEventListener('input', compute);
+  quickBtns.forEach(b => {
+    b.addEventListener('click', () => {
+      inputEl.value = formatAmount(parseFloat(b.dataset.amount));
+      compute();
+    });
+  });
+}
+
 // ========== 도움말 모달 ==========
 function setupHelp() {
   const btn = document.getElementById('help-btn');
@@ -808,6 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVoicePicker();
   setupInputModal();
   setupListenModal();
+  setupCurrencyModal();
   setupSettingsModal();
   setupRateSlider();
   setupHelp();

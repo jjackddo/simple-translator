@@ -60,6 +60,10 @@
       <span class="action-icon">🎤</span>
       <span class="action-label">듣기</span>
     </button>
+    <button id="currency-btn" class="action-btn" type="button">
+      <span class="action-icon">💱</span>
+      <span class="action-label">환율</span>
+    </button>
   </div>
 
   <div id="input-modal" class="modal" role="dialog" aria-modal="true" hidden>
@@ -101,6 +105,34 @@
           <label class="form-label">한국어 번역</label>
           <div id="listen-ko" class="result-text" aria-live="polite"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="currency-modal" class="modal" role="dialog" aria-labelledby="currency-title" aria-modal="true" hidden>
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 id="currency-title">💱 환율 계산기</h2>
+        <button class="modal-close" aria-label="닫기" data-close="1">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" id="currency-input-label">현지 금액 입력</label>
+        <div class="currency-input-row">
+          <input id="currency-input" type="text" inputmode="decimal" pattern="[0-9.,]*" placeholder="예: 100000" autocomplete="off" />
+          <span id="currency-input-unit" class="currency-unit">VND</span>
+        </div>
+        <div class="quick-amounts">
+          <button type="button" class="quick-amount" data-amount="1000">1,000</button>
+          <button type="button" class="quick-amount" data-amount="10000">10,000</button>
+          <button type="button" class="quick-amount" data-amount="100000">100,000</button>
+          <button type="button" class="quick-amount" data-amount="1000000">1,000,000</button>
+        </div>
+        <div class="result-block currency-result-block">
+          <label class="form-label">한국 원 (KRW)</label>
+          <div id="currency-result" class="result-text currency-result">—</div>
+        </div>
+        <div id="currency-status" class="status-line"></div>
       </div>
     </div>
   </div>
@@ -150,6 +182,7 @@
             <li>⚙️ <strong>설정</strong>에서 재생 속도 조절과 오프라인 음성 다운로드를 할 수 있습니다.</li>
             <li>하단 <strong>✍️ 입력</strong>: 말하고 싶은 한국어를 써서 베트남어로 통역·재생.</li>
             <li>하단 <strong>🎤 듣기</strong>: 상대방 말을 녹음해 한국어로 번역해줍니다. 마이크 권한이 필요합니다.</li>
+            <li>하단 <strong>💱 환율</strong>: 현지 금액을 입력하면 한국 원으로 환산. 환율은 6시간 캐시 + 오프라인 폴백.</li>
           </ul>
         </section>
 

@@ -598,6 +598,16 @@ footer {
   background: var(--coral-deep);
 }
 
+/* 환율 — 머니 그린 */
+#currency-btn {
+  background: #1F6E3E;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(31, 110, 62, 0.32);
+}
+#currency-btn:active {
+  background: #145A2E;
+}
+
 .action-icon {
   font-size: 20px;
   line-height: 1;
@@ -707,6 +717,85 @@ footer {
   background: var(--surface-2);
   border: 1px solid var(--hair);
   border-radius: var(--r-md);
+}
+
+/* 환율 모달 전용 */
+.currency-input-row {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.currency-input-row:focus-within {
+  border-color: #1F6E3E;
+  box-shadow: 0 0 0 4px rgba(31, 110, 62, 0.18);
+}
+#currency-input {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+  font-family: inherit;
+  outline: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.currency-unit {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-left: 1px solid var(--hair);
+  min-width: 60px;
+  justify-content: center;
+}
+
+.quick-amounts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.quick-amount {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px solid var(--hair-strong);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.quick-amount:active {
+  background: var(--surface-2);
+  transform: scale(0.96);
+}
+
+.currency-result-block {
+  background: rgba(31, 110, 62, 0.08);
+  border-color: rgba(31, 110, 62, 0.25);
+}
+.currency-result {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1F6E3E;
+  letter-spacing: -0.3px;
 }
 
 .result-text {
@@ -1020,6 +1109,29 @@ footer {
   .lang-btn.active {
     background: var(--coral);
     color: #fff;
+  }
+
+  /* 환율 모달 — 다크 톤 조정 */
+  .currency-result-block {
+    background: rgba(76, 200, 130, 0.10);
+    border-color: rgba(76, 200, 130, 0.30);
+  }
+  .currency-result {
+    color: #7CD6A0;
+  }
+  .currency-input-row:focus-within {
+    border-color: #7CD6A0;
+    box-shadow: 0 0 0 4px rgba(76, 200, 130, 0.20);
+  }
+  .currency-unit {
+    background: var(--surface-2);
+    border-left-color: var(--hair);
+  }
+  #currency-btn {
+    background: #2E8C56;
+  }
+  #currency-btn:active {
+    background: #1F6E3E;
   }
 
   /* 다크모드 — 성별 토글 톤 조정 */
