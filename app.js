@@ -844,13 +844,19 @@ function setupCurrencyModal() {
   const labelEl = document.getElementById('currency-input-label');
   const resultEl = document.getElementById('currency-result');
   const statusEl = document.getElementById('currency-status');
+  const clearBtn = document.getElementById('currency-clear');
   const quickBtns = modal.querySelectorAll('.quick-amount');
+
+  const refreshClearVisibility = () => {
+    if (clearBtn) clearBtn.hidden = !inputEl.value;
+  };
 
   let ratesData = null;
 
   const compute = () => {
     const cfg = CURRENCY_BY_LANG[currentLang];
     const v = parseAmount(inputEl.value);
+    refreshClearVisibility();
     if (!isFinite(v) || v <= 0 || !ratesData) {
       resultEl.textContent = '—';
       return;
@@ -896,6 +902,16 @@ function setupCurrencyModal() {
     if (e.key === 'Escape' && !modal.hidden) close();
   });
   inputEl.addEventListener('input', compute);
+
+  if (clearBtn) {
+    clearBtn.addEventListener('mousedown', e => e.preventDefault());
+    clearBtn.addEventListener('click', () => {
+      inputEl.value = '';
+      compute();
+      if (document.activeElement !== inputEl) inputEl.focus();
+    });
+  }
+
   quickBtns.forEach(b => {
     // 버튼 클릭 시 input의 포커스를 빼앗지 않도록 mousedown 기본동작 차단
     // → 모바일 키보드가 닫히지 않아 UI가 흔들리지 않음

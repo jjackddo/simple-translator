@@ -761,6 +761,33 @@ footer {
   justify-content: center;
 }
 
+.currency-clear {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  margin: auto 4px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.currency-clear[hidden] { display: none; }
+.currency-clear:active {
+  background: var(--surface-2);
+  color: var(--ink);
+  transform: scale(0.92);
+}
+
 .quick-amounts {
   display: flex;
   gap: 6px;
