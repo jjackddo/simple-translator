@@ -106,8 +106,6 @@ function speak(text) {
 let audioManifest = {};
 let audioCtx = null;
 let currentSource = null;
-let sourceStartedAt = 0;
-let sourceDuration = 0;
 const BUFFER_CACHE_MAX = 25;     // 최근 재생한 버퍼만 유지 (메모리 절약)
 const bufferCache = new Map();   // path → decoded AudioBuffer (LRU)
 
@@ -170,7 +168,6 @@ function stopAudio() {
     currentSource = null;
   }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
-  stopMeter();
 }
 
 async function play(text) {
@@ -200,63 +197,15 @@ async function play(text) {
   source.playbackRate.value = currentRate;
   source.connect(ctx.destination);
   source.onended = () => {
-    if (currentSource === source) {
-      currentSource = null;
-      stopMeter();
-    }
+    if (currentSource === source) currentSource = null;
   };
 
   currentSource = source;
-  sourceStartedAt = ctx.currentTime;
-  sourceDuration = buffer.duration / currentRate;
   try {
     source.start(0);
   } catch (err) {
     console.warn('MP3 재생 실패:', err);
     speak(text);
-    return;
-  }
-  startMeter();
-}
-
-// ========== 레벨 미터 (시간 기반 진행 바) ==========
-let meterRAF = null;
-
-function startMeter() {
-  const meterEl = document.getElementById('level-meter');
-  const barEl = document.getElementById('level-bar');
-  if (!meterEl) return;
-  meterEl.hidden = false;
-  meterEl.classList.add('active');
-
-  const tick = () => {
-    if (!currentSource || !audioCtx) { stopMeter(); return; }
-    const elapsed = audioCtx.currentTime - sourceStartedAt;
-    const pct = sourceDuration > 0
-      ? Math.min(100, (elapsed / sourceDuration) * 100)
-      : 0;
-    if (barEl) barEl.style.width = pct + '%';
-    if (elapsed >= sourceDuration) { stopMeter(); return; }
-    meterRAF = requestAnimationFrame(tick);
-  };
-  meterRAF = requestAnimationFrame(tick);
-}
-
-function stopMeter() {
-  if (meterRAF) {
-    cancelAnimationFrame(meterRAF);
-    meterRAF = null;
-  }
-  const meterEl = document.getElementById('level-meter');
-  const barEl = document.getElementById('level-bar');
-  if (meterEl) {
-    meterEl.classList.remove('active');
-    setTimeout(() => {
-      if (!currentSource) {
-        meterEl.hidden = true;
-        if (barEl) barEl.style.width = '0%';
-      }
-    }, 250);
   }
 }
 
