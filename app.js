@@ -2,10 +2,10 @@
 // code: 브라우저 SpeechSynthesis/SpeechRecognition 언어 태그
 // translateCode: Google Cloud Translation API에 넣을 언어 코드
 const LANG_CONFIG = {
-  vi: { code: 'vi-VN', translateCode: 'vi',    label: '🇻🇳 베트남어', title: '베트남 여행 회화', voiceQualityNames: /linh|hoaimy|namminh|lien/i },
-  ja: { code: 'ja-JP', translateCode: 'ja',    label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
-  zh: { code: 'zh-CN', translateCode: 'zh-CN', label: '🇨🇳 중국어',   title: '중국 여행 회화',   voiceQualityNames: /xiaoxiao|xiaoyi|yunxi|yunjian/i },
-  en: { code: 'en-US', translateCode: 'en',    label: '🇺🇸 영어',     title: '영어 여행 회화',   voiceQualityNames: /samantha|alex|fred|daniel|karen|moira/i },
+  vi: { code: 'vi-VN', translateCode: 'vi',    name: '베트남어', label: '🇻🇳 베트남어', title: '베트남 여행 회화', voiceQualityNames: /linh|hoaimy|namminh|lien/i },
+  ja: { code: 'ja-JP', translateCode: 'ja',    name: '일본어',   label: '🇯🇵 일본어',   title: '일본 여행 회화',   voiceQualityNames: /kyoko|otoya|hattori/i },
+  zh: { code: 'zh-CN', translateCode: 'zh-CN', name: '중국어',   label: '🇨🇳 중국어',   title: '중국 여행 회화',   voiceQualityNames: /xiaoxiao|xiaoyi|yunxi|yunjian/i },
+  en: { code: 'en-US', translateCode: 'en',    name: '영어',     label: '🇺🇸 영어',     title: '영어 여행 회화',   voiceQualityNames: /samantha|alex|fred|daniel|karen|moira/i },
 };
 const LANG_STORAGE_KEY = 'vn-phrasebook-lang';
 const GENDER_STORAGE_KEY = 'vn-phrasebook-gender';
@@ -621,15 +621,27 @@ function setupListenModal() {
 function applyLangUI() {
   const cfg = LANG_CONFIG[currentLang];
   document.title = cfg.title;
+
   const titleEl = document.getElementById('app-title');
   if (titleEl) titleEl.textContent = cfg.label.split(' ')[0] + ' ' + cfg.title;
+
+  // 입력/듣기 모달의 동적 텍스트
+  const setText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+  setText('input-modal-title', `✍️ 한국어 → ${cfg.name}`);
+  setText('input-result-label', cfg.name);
+  setText('listen-modal-title', `🎤 ${cfg.name} 듣기 → 한국어 번역`);
+  setText('listen-source-label', `들린 ${cfg.name}`);
+  setText('footer-hint', `항목을 눌러 ${cfg.name} 발음을 들어보세요`);
+
   // 토글 버튼 활성 상태
   document.querySelectorAll('[data-lang]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === currentLang);
     btn.setAttribute('aria-pressed', btn.dataset.lang === currentLang ? 'true' : 'false');
   });
-  // HTML lang attribute
-  document.documentElement.setAttribute('lang', 'ko');  // UI는 한국어 유지
+  document.documentElement.setAttribute('lang', 'ko');
 }
 
 async function switchLang(newLang) {

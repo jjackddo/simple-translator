@@ -43,7 +43,7 @@
   <main id="content"></main>
 
   <footer>
-    <p>항목을 눌러 베트남어 발음을 들어보세요</p>
+    <p id="footer-hint">항목을 눌러 현지어 발음을 들어보세요</p>
   </footer>
 
   <div class="action-bar">
@@ -65,7 +65,7 @@
     <div class="modal-backdrop" data-close="1"></div>
     <div class="modal-panel">
       <div class="modal-header">
-        <h2>✍️ 한국어 → 베트남어</h2>
+        <h2 id="input-modal-title">✍️ 한국어 → 베트남어</h2>
         <button class="modal-close" aria-label="닫기" data-close="1">✕</button>
       </div>
       <div class="modal-body">
@@ -74,7 +74,7 @@
         <button id="input-translate-btn" class="primary-btn" type="button">🔄 번역 &amp; 재생</button>
         <div id="input-status" class="status-line"></div>
         <div class="result-block">
-          <label class="form-label">베트남어</label>
+          <label class="form-label" id="input-result-label">베트남어</label>
           <div id="input-vi" class="result-text" aria-live="polite"></div>
           <button id="input-speak-btn" class="secondary-btn" type="button">🔊 다시 듣기</button>
         </div>
@@ -86,14 +86,14 @@
     <div class="modal-backdrop" data-close="1"></div>
     <div class="modal-panel">
       <div class="modal-header">
-        <h2>🎤 듣기 → 한국어 번역</h2>
+        <h2 id="listen-modal-title">🎤 듣기 → 한국어 번역</h2>
         <button class="modal-close" aria-label="닫기" data-close="1">✕</button>
       </div>
       <div class="modal-body">
         <button id="listen-start-btn" class="primary-btn big" type="button">🎤 말하기 시작</button>
         <div id="listen-status" class="status-line"></div>
         <div class="result-block">
-          <label class="form-label">들린 베트남어</label>
+          <label class="form-label" id="listen-source-label">들린 현지어</label>
           <div id="listen-vi" class="result-text" aria-live="polite"></div>
         </div>
         <div class="result-block">
@@ -171,12 +171,12 @@
         <section>
           <h3>🔊 사용 방법</h3>
           <ul>
-            <li>문장 카드를 <strong>탭</strong>하면 베트남어 발음이 재생됩니다.</li>
-            <li>상단 <strong>검색창</strong>에 한국어나 베트남어를 입력해 빠르게 찾을 수 있습니다.</li>
+            <li>문장 카드를 <strong>탭</strong>하면 현지어 발음이 재생됩니다.</li>
+            <li>상단 <strong>검색창</strong>에 한국어나 현지어를 입력해 빠르게 찾을 수 있습니다.</li>
             <li>카테고리 탭을 누르면 해당 섹션으로 이동합니다.</li>
             <li>상단 <strong>🇻🇳/🇯🇵/🇨🇳/🇺🇸</strong>: 언어 전환. 옆의 <strong>♀/♂</strong> 버튼을 탭하면 음성 성별이 바뀝니다.</li>
             <li>⚙️ <strong>설정</strong>에서 재생 속도 조절과 오프라인 음성 다운로드를 할 수 있습니다.</li>
-            <li>하단 <strong>✍️ 입력</strong>: 말하고 싶은 한국어를 써서 베트남어로 통역·재생.</li>
+            <li>하단 <strong>✍️ 입력</strong>: 말하고 싶은 한국어를 써서 현지어로 통역·재생.</li>
             <li>하단 <strong>🎤 듣기</strong>: 상대방 말을 녹음해 한국어로 번역해줍니다. 마이크 권한이 필요합니다.</li>
             <li>하단 <strong>💱 환율</strong>: 현지 금액을 입력하면 한국 원으로 환산. 환율은 6시간 캐시 + 오프라인 폴백.</li>
           </ul>
