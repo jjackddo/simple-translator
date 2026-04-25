@@ -815,14 +815,25 @@ footer {
 }
 
 .currency-result-block {
+  margin-top: 6px;
+  padding: 18px 16px;
   background: rgba(31, 110, 62, 0.08);
   border-color: rgba(31, 110, 62, 0.25);
+  text-align: center;
+}
+.currency-result-block .form-label {
+  text-align: center;
+  margin: 0 0 8px;
+  color: #1F6E3E;
+  opacity: 0.85;
 }
 .currency-result {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
   color: #1F6E3E;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .result-text {
@@ -1142,6 +1153,9 @@ footer {
   .currency-result-block {
     background: rgba(76, 200, 130, 0.10);
     border-color: rgba(76, 200, 130, 0.30);
+  }
+  .currency-result-block .form-label {
+    color: #7CD6A0;
   }
   .currency-result {
     color: #7CD6A0;
