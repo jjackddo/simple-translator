@@ -898,7 +898,10 @@ function setupCurrencyModal() {
   inputEl.addEventListener('input', compute);
   quickBtns.forEach(b => {
     b.addEventListener('click', () => {
-      inputEl.value = formatAmount(parseFloat(b.dataset.amount));
+      const current = parseAmount(inputEl.value);
+      const base = isFinite(current) && current > 0 ? current : 0;
+      const add = parseFloat(b.dataset.amount);
+      inputEl.value = formatAmount(base + add);
       compute();
     });
   });
